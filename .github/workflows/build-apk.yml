@@ -85,32 +85,28 @@ jobs:
             fi
           fi
 
-          # 3. Prepare Release Keystore (uses GitHub Secret if set, otherwise auto-generates upload key)
+          # 3. Prepare Release Keystore (uses GitHub Secret if set, otherwise uses permanent project key from debug.keystore so updates never conflict)
           if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
             echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
             echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
             echo "STORE_PASSWORD=${STORE_PASSWORD_SECRET:-android123}" >> $GITHUB_ENV
             echo "KEY_PASSWORD=${KEY_PASSWORD_SECRET:-android123}" >> $GITHUB_ENV
           else
-            if [ ! -f "my-upload-key.jks" ]; then
-              keytool -genkeypair -v \
-                -keystore my-upload-key.jks \
-                -storepass android123 \
-                -alias upload \
-                -keypass android123 \
-                -keyalg RSA \
-                -keysize 2048 \
-                -validity 10000 \
-                -dname "CN=Sports Live,OU=Mobile,O=SportsLive,L=Dhaka,S=Dhaka,C=BD"
-            fi
+            cp debug.keystore my-upload-key.jks
+            keytool -changealias \
+              -keystore my-upload-key.jks \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -destalias upload
             echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
-            echo "STORE_PASSWORD=android123" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=android123" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
           fi
 
       - name: Build Debug & Release APKs
         run: |
-          gradle :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+          gradle :app:assembleDebug :app:assembleRelease -PenableR8Release=true --no-daemon --stacktrace
 
       - name: Prepare Output APKs
         run: |

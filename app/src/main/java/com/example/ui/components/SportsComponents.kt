@@ -729,15 +729,15 @@ fun MatchCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .border(
-                width = if (isLive) 1.6.dp else 1.2.dp,
+                width = if (isLive) 1.4.dp else 1.dp,
                 brush = cardBorderBrush,
-                shape = RoundedCornerShape(22.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             .testTag("match_card_${match.id}"),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0C121E))
     ) {
         Column(
@@ -751,7 +751,7 @@ fun MatchCard(
                         )
                     )
                 )
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 12.dp, vertical = 9.dp)
         ) {
             // 1. Top Bar: Sport Neon Pill + Tournament Name + Favourite Star
             Row(
@@ -763,43 +763,43 @@ fun MatchCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF0A0F1A))
-                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(7.dp)
+                            .size(6.dp)
                             .clip(CircleShape)
                             .background(if (isLive) LiveRed else CyanAccent)
                     )
-                    Spacer(modifier = Modifier.width(7.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = formattedHeader,
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFFE2E8F0),
-                            fontSize = 11.5.sp,
-                            letterSpacing = 0.5.sp
+                            fontSize = 10.5.sp,
+                            letterSpacing = 0.4.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 IconButton(
                     onClick = onFavoriteToggle,
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(8.dp))
                         .background(if (match.isFavorite) GoldYellow.copy(alpha = 0.18f) else Color(0xFF131D2E))
                         .border(
                             1.dp,
                             if (match.isFavorite) GoldYellow.copy(alpha = 0.6f) else Color(0xFF23324D),
-                            RoundedCornerShape(10.dp)
+                            RoundedCornerShape(8.dp)
                         )
                         .testTag("fav_toggle_${match.id}")
                 ) {
@@ -807,18 +807,18 @@ fun MatchCard(
                         imageVector = if (match.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
                         contentDescription = if (match.isFavorite) "Remove from Favourites" else "Add to Favourites",
                         tint = if (match.isFavorite) GoldYellow else TextSecondary,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. 3D Stadium Arena Row: Vertical Team 1 Shield | Center Arena VS/LIVE | Vertical Team 2 Shield
+            // 2. Compact Arena Row: Team 1 | Center VS/LIVE | Team 2
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -834,13 +834,13 @@ fun MatchCard(
                         teamName = match.team1Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = team1Display,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 14.sp
+                            fontSize = 12.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -851,7 +851,7 @@ fun MatchCard(
                 // Center Stadium Hub
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 10.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 ) {
                     when (match.status) {
                         MatchStatus.LIVE -> {
@@ -860,33 +860,33 @@ fun MatchCard(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
                                     .background(LiveRed.copy(alpha = 0.20f))
-                                    .border(1.2.dp, LiveRed, RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .border(1.dp, LiveRed, RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 9.dp, vertical = 2.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(7.dp)
+                                        .size(6.dp)
                                         .clip(CircleShape)
                                         .background(LiveRed)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "LIVE",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White,
-                                        fontSize = 11.sp,
-                                        letterSpacing = 0.8.sp
+                                        fontSize = 9.5.sp,
+                                        letterSpacing = 0.6.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = liveTimerFormatted,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = CyanAccent,
-                                    fontSize = 13.sp
+                                    fontSize = 11.5.sp
                                 )
                             )
                         }
@@ -896,24 +896,24 @@ fun MatchCard(
                                     .clip(RoundedCornerShape(99.dp))
                                     .background(GoldYellow.copy(alpha = 0.14f))
                                     .border(1.dp, GoldYellow.copy(alpha = 0.55f), RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 11.dp, vertical = 3.dp)
+                                    .padding(horizontal = 9.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = "VS",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = GoldYellow,
-                                        fontSize = 12.sp
+                                        fontSize = 10.5.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = upcomingTimeText,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = CyanAccent,
-                                    fontSize = 12.5.sp
+                                    fontSize = 11.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -922,7 +922,7 @@ fun MatchCard(
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF94A3B8),
-                                    fontSize = 11.sp
+                                    fontSize = 9.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -932,23 +932,23 @@ fun MatchCard(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
                                     .background(Color(0xFF1E293B))
-                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = "FINISHED",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color(0xFF94A3B8),
-                                        fontSize = 10.sp
+                                        fontSize = 9.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = upcomingDateText,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = TextMuted,
-                                    fontSize = 11.sp
+                                    fontSize = 9.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -959,7 +959,7 @@ fun MatchCard(
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = GoldYellow,
-                                    fontSize = 16.sp
+                                    fontSize = 13.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -979,13 +979,13 @@ fun MatchCard(
                         teamName = match.team2Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = team2Display,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 14.sp
+                            fontSize = 12.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -994,16 +994,16 @@ fun MatchCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. Bottom Action Dock: Countdown/Status Pill on Left + Glowing "Watch Live FHD" Button on Right
+            // 3. Compact Bottom Action Dock
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF080C14))
-                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1012,15 +1012,15 @@ fun MatchCard(
                         imageVector = if (isLive) Icons.Default.Sensors else Icons.Default.Schedule,
                         contentDescription = null,
                         tint = if (isLive) LiveRed else SkyBlue,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(13.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = if (isLive) "Live Broadcast Active" else bottomStatusText,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = if (isLive) Color(0xFFE2E8F0) else TextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 11.sp
                         )
                     )
                 }
@@ -1041,22 +1041,22 @@ fun MatchCard(
                                 )
                             }
                         )
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                        .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
                         tint = if (isLive) Color(0xFF070A10) else CyanAccent,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = if (isLive) "WATCH LIVE" else "SERVERS",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = if (isLive) Color(0xFF070A10) else CyanAccent,
-                            fontSize = 10.5.sp,
-                            letterSpacing = 0.5.sp
+                            fontSize = 9.5.sp,
+                            letterSpacing = 0.4.sp
                         )
                     )
                 }
@@ -1107,10 +1107,10 @@ fun TeamFlagBadge(
     if (isMotoGp && resolved.flagUrl.isBlank()) {
         Box(
             modifier = Modifier
-                .size(54.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .size(40.dp)
+                .clip(RoundedCornerShape(13.dp))
                 .background(Color(0xFF141F33))
-                .border(1.2.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(16.dp)),
+                .border(1.1.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -1118,7 +1118,7 @@ fun TeamFlagBadge(
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
                     color = CyanAccent,
-                    fontSize = 14.sp,
+                    fontSize = 11.5.sp,
                     letterSpacing = (-0.5).sp
                 )
             )
@@ -1152,32 +1152,32 @@ fun TeamFlagBadge(
 
         Box(
             modifier = Modifier
-                .size(54.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .size(40.dp)
+                .clip(RoundedCornerShape(13.dp))
                 .background(
                     Brush.radialGradient(
                         colors = listOf(Color(0xFF1E2F4D), Color(0xFF0E1624))
                     )
                 )
                 .border(
-                    width = 1.3.dp,
+                    width = 1.1.dp,
                     brush = Brush.linearGradient(
                         colors = listOf(CyanAccent.copy(alpha = 0.50f), SkyBlue.copy(alpha = 0.25f))
                     ),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(13.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             if (!hasRemoteUrl) {
                 if (effectiveIsNational && resolved.emoji.isNotBlank() && resolved.emoji != "🏳️") {
-                    Text(text = resolved.emoji, fontSize = 24.sp)
+                    Text(text = resolved.emoji, fontSize = 19.sp)
                 } else {
                     Text(
                         text = resolved.code.take(3).uppercase(),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = CyanAccent,
-                            fontSize = 12.sp
+                            fontSize = 10.5.sp
                         )
                     )
                 }
@@ -1197,8 +1197,8 @@ fun TeamFlagBadge(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(if (effectiveIsNational) 0.dp else 5.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .padding(if (effectiveIsNational) 0.dp else 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
                 )
             }
         }

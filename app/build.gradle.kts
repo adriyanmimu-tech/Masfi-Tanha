@@ -17,10 +17,14 @@ android {
     applicationId = "com.aistudio.footballtv.kpqwle"
     minSdk = 24
     targetSdk = 36
-    versionCode = 4
-    versionName = "1.2.1"
+    versionCode = 10
+    versionName = "2.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  androidResources {
+    localeFilters += listOf("en", "bn")
   }
 
   packaging {
@@ -30,8 +34,16 @@ android {
         "META-INF/NOTICE*",
         "META-INF/AL2.0",
         "META-INF/LGPL2.1",
+        "META-INF/DEPENDENCIES",
+        "META-INF/INDEX.LIST",
         "META-INF/*.kotlin_module",
-        "DebugProbesKt.bin"
+        "META-INF/*.version",
+        "DebugProbesKt.bin",
+        "kotlin/annotation/**",
+        "kotlin/coroutines/**",
+        "kotlin/internal/**",
+        "kotlin/ranges/**",
+        "kotlin/reflect/**"
       )
     }
   }
@@ -56,8 +68,10 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      val enableR8 = project.findProperty("enableR8Release") == "true"
+      isCrunchPngs = enableR8
+      isMinifyEnabled = enableR8
+      isShrinkResources = enableR8
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.
@@ -110,12 +124,12 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
-  implementation(libs.androidx.compose.ui.tooling.preview)
+  // implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
-  implementation(libs.androidx.lifecycle.viewmodel.compose)
+  // implementation(libs.androidx.lifecycle.viewmodel.compose)
   // implementation(libs.androidx.navigation.compose)
   // implementation(libs.androidx.room.ktx)
   // implementation(libs.androidx.room.runtime)

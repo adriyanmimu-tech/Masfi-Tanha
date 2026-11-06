@@ -1,6 +1,8 @@
 package com.example.player
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Base64
 import androidx.annotation.OptIn
@@ -113,6 +115,36 @@ class ExoPlayerManager(private val context: Context) {
     private val preWarmedUrls = Collections.synchronizedSet(LinkedHashSet<String>())
     private val dnsCache = java.util.concurrent.ConcurrentHashMap<String, List<InetAddress>>()
     private var currentForceLowQuality: Boolean = false
+    private var sharedBandwidthMeter: DefaultBandwidthMeter? = null
+
+    /**
+     * Detects current network speed (from ExoPlayer's real-time DefaultBandwidthMeter + Android NetworkCapabilities)
+     * and returns the optimal maximum video bitrate so slow internet automatically plays in Low Quality without buffering.
+     */
+    private fun computeAutoNetworkMaxBitrate(forceLowQuality: Boolean): Pair<Int, Boolean> {
+        if (forceLowQuality) return 750_000 to true
+
+        val measuredBps = sharedBandwidthMeter?.bitrateEstimate ?: -1L
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val caps = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
+        val systemDownKbps = caps?.linkDownstreamBandwidthKbps ?: 0
+
+        // If real-time measured bitrate is available and valid
+        if (measuredBps in 50_000L..100_000_000L) {
+            return when {
+                measuredBps < 950_000L -> 650_000 to true       // Slow internet -> Auto Low Quality (SD)
+                measuredBps < 1_800_000L -> 1_250_000 to false  // Moderate-slow internet -> Smooth 480p/540p
+                measuredBps < 3_200_000L -> 2_200_000 to false  // Good internet -> 720p HD
+                else -> 6_500_000 to false                      // Fast internet -> 1080p FHD
+            }
+        }
+
+        // Fallback to OS link downstream estimate before first segment is measured
+        if (systemDownKbps in 1..1500) {
+            return 700_000 to true // Slow cellular/Wi-Fi -> Auto Low Quality (SD)
+        }
+        return 2_800_000 to false // Safe balanced initial start so first frame loads fast
+    }
 
     // Fast in-memory DNS cache + IPv4 preference to avoid slow DNS lookups on stream/segment switches
     private val fastDns = object : Dns {
@@ -206,14 +238,14 @@ class ExoPlayerManager(private val context: Context) {
                 .setEnableDecoderFallback(true)
 
             // System 2: Zero-Freeze Adaptive Bitrate Track Selector
-            // Starts quickly and downshifts resolution in 2.0s before the buffer can ever run dry
+            // Starts quickly and downshifts resolution in 1.2s if internet slows down so video never pauses
             val trackSelector = DefaultTrackSelector(
                 context,
                 AdaptiveTrackSelection.Factory(
-                    2_500,  // minDurationForQualityIncreaseMs (confirm 2.5s stable speed before raising to FHD)
-                    2_000,  // maxDurationForQualityDecreaseMs (drop quality in 2s if speed dips so video never pauses)
-                    3_000,  // minDurationToRetainAfterDiscardMs
-                    0.72f   // bandwidthFraction (28% safety headroom against network jitter)
+                    2_200,  // minDurationForQualityIncreaseMs (confirm 2.2s stable speed before raising quality)
+                    1_200,  // maxDurationForQualityDecreaseMs (drop to Low Quality in 1.2s when internet dips)
+                    2_500,  // minDurationToRetainAfterDiscardMs
+                    0.70f   // bandwidthFraction (30% safety headroom so slow networks never choke)
                 )
             )
 
@@ -232,6 +264,7 @@ class ExoPlayerManager(private val context: Context) {
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
                 .setResetOnNetworkTypeChange(true)
                 .build()
+            sharedBandwidthMeter = bandwidthMeter
 
             exoPlayer = ExoPlayer.Builder(context, renderersFactory)
                 .setTrackSelector(trackSelector)
@@ -391,10 +424,27 @@ class ExoPlayerManager(private val context: Context) {
     private fun startPositionTracking() {
         positionUpdateJob?.cancel()
         positionUpdateJob = scope.launch {
+            var tickCount = 0
             while (true) {
                 exoPlayer?.let { p ->
                     _currentPosition.value = p.currentPosition.coerceAtLeast(0L)
                     _duration.value = p.duration.coerceAtLeast(0L)
+                    // Every 3 seconds, dynamically adapt max video bitrate & SD constraint to real-time network speed
+                    tickCount++
+                    if (tickCount % 6 == 0 && p.isPlaying) {
+                        val (targetBitrate, constrainSd) = computeAutoNetworkMaxBitrate(currentForceLowQuality)
+                        val currentMax = p.trackSelectionParameters.maxVideoBitrate
+                        if (kotlin.math.abs(currentMax - targetBitrate) > 300_000) {
+                            val builder = p.trackSelectionParameters.buildUpon()
+                                .setMaxVideoBitrate(targetBitrate)
+                            if (constrainSd) {
+                                builder.setMaxVideoSizeSd()
+                            } else {
+                                builder.clearVideoSizeConstraints()
+                            }
+                            p.trackSelectionParameters = builder.build()
+                        }
+                    }
                 }
                 delay(500)
             }
@@ -451,17 +501,18 @@ class ExoPlayerManager(private val context: Context) {
             _errorMessage.value = null
             _isBuffering.value = true
 
-            player.trackSelectionParameters = if (forceLowQuality) {
+            val (initialMaxBitrate, constrainSd) = computeAutoNetworkMaxBitrate(forceLowQuality)
+            player.trackSelectionParameters = if (constrainSd) {
                 player.trackSelectionParameters
                     .buildUpon()
                     .setMaxVideoSizeSd()
-                    .setMaxVideoBitrate(850_000)
+                    .setMaxVideoBitrate(initialMaxBitrate)
                     .build()
             } else {
                 player.trackSelectionParameters
                     .buildUpon()
                     .clearVideoSizeConstraints()
-                    .setMaxVideoBitrate(6_500_000) // Cap extreme 4K/raw bitrates so 1080p FHD plays smoothly without choking
+                    .setMaxVideoBitrate(initialMaxBitrate)
                     .build()
             }
 
