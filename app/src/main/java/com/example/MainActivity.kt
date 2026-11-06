@@ -261,11 +261,18 @@ fun FootballLiveTvApp(
         streamPickerChannel = null
         streamPickerHighlight = null
         showStreamPickerModal = true
-        isResolvingMatchStreams = match.publicEnabledStreams().isEmpty()
+        val initialStreams = match.publicEnabledStreams()
+        isResolvingMatchStreams = initialStreams.isEmpty()
+        if (initialStreams.isNotEmpty()) {
+            playerManager.preWarmStreams(initialStreams)
+        }
         coroutineScope.launch {
             val resolved = repository.resolveMatchStreamsOnDemand(match.id)
-            if (resolved != null && streamPickerMatch?.id == match.id) {
-                streamPickerMatch = resolved
+            if (resolved != null) {
+                playerManager.preWarmStreams(resolved.publicEnabledStreams())
+                if (streamPickerMatch?.id == match.id) {
+                    streamPickerMatch = resolved
+                }
             }
             if (streamPickerMatch?.id == match.id) {
                 isResolvingMatchStreams = false
@@ -287,9 +294,21 @@ fun FootballLiveTvApp(
         showStreamPickerModal = true
         coroutineScope.launch {
             val resolved = repository.resolveHighlightStreamsOnDemand(highlight)
+            playerManager.preWarmStreams(resolved)
             if (streamPickerHighlight?.id == highlight.id) {
                 resolvedHighlightStreams = resolved
                 isResolvingMatchStreams = false
+            }
+        }
+    }
+
+    // Background pre-warm top Highlight streams when user switches to Highlights tab
+    LaunchedEffect(selectedTab, highlights) {
+        if (selectedTab == NavTab.HIGHLIGHTS && highlights.isNotEmpty()) {
+            val firstHighlight = highlights.first()
+            val resolved = runCatching { repository.resolveHighlightStreamsOnDemand(firstHighlight) }.getOrDefault(emptyList())
+            if (resolved.isNotEmpty()) {
+                playerManager.preWarmStreams(resolved)
             }
         }
     }
