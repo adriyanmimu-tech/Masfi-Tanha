@@ -285,34 +285,6 @@ fun FootballLiveTvApp(
         }
     }
 
-    fun openHighlightModal(highlight: HighlightItem) {
-        streamPickerHighlight = highlight
-        streamPickerMatch = null
-        streamPickerChannel = null
-        resolvedHighlightStreams = emptyList()
-        isResolvingMatchStreams = true
-        showStreamPickerModal = true
-        coroutineScope.launch {
-            val resolved = repository.resolveHighlightStreamsOnDemand(highlight)
-            playerManager.preWarmStreams(resolved)
-            if (streamPickerHighlight?.id == highlight.id) {
-                resolvedHighlightStreams = resolved
-                isResolvingMatchStreams = false
-            }
-        }
-    }
-
-    // Background pre-warm top Highlight streams when user switches to Highlights tab
-    LaunchedEffect(selectedTab, highlights) {
-        if (selectedTab == NavTab.HIGHLIGHTS && highlights.isNotEmpty()) {
-            val firstHighlight = highlights.first()
-            val resolved = runCatching { repository.resolveHighlightStreamsOnDemand(firstHighlight) }.getOrDefault(emptyList())
-            if (resolved.isNotEmpty()) {
-                playerManager.preWarmStreams(resolved)
-            }
-        }
-    }
-
     fun startPlaying(match: LiveMatch?, title: String?, streams: List<StreamSource>) {
         val nonPointerStreams = streams.filter { s ->
             val cleanUrl = s.url.substringBefore("|").trim()
@@ -354,6 +326,29 @@ fun FootballLiveTvApp(
         currentScreen = AppScreen.PLAYER
     }
 
+    fun openHighlightModal(highlight: HighlightItem) {
+        streamPickerHighlight = highlight
+        streamPickerMatch = null
+        streamPickerChannel = null
+        resolvedHighlightStreams = emptyList()
+        isResolvingMatchStreams = true
+        showStreamPickerModal = true
+        coroutineScope.launch {
+            val resolved = repository.resolveHighlightStreamsOnDemand(highlight)
+            playerManager.preWarmStreams(resolved)
+            if (streamPickerHighlight?.id == highlight.id) {
+                resolvedHighlightStreams = resolved
+                isResolvingMatchStreams = false
+                // If there is exactly 1 highlight stream, launch the player immediately for instant playback
+                if (resolved.size == 1) {
+                    showStreamPickerModal = false
+                    streamPickerHighlight = null
+                    startPlaying(null, highlight.title, resolved)
+                }
+            }
+        }
+    }
+
     // Auto-sync activeMatch, activeStreams, and streamPickerMatch when live playlists & match broadcasts refresh
     LaunchedEffect(matches) {
         activeMatch?.let { currentActive ->
@@ -374,9 +369,11 @@ fun FootballLiveTvApp(
     }
 
     // 1. Auto-refresh Football (ESPN) & Cricket (CREX Live/Upcoming/Finished) + Auto-Playlist Matcher
-    // ONLY while the app is visible (STARTED/RESUMED). Automatically stops polling when backgrounded.
+    // ONLY while on MAIN_TABS (pauses background network polling during active video playback so 100% of bandwidth goes to ExoPlayer).
     LaunchedEffect(
         lifecycleOwner,
+        currentScreen,
+        isInPipMode,
         config.autoRefreshIntervalSec,
         config.footballSyncEnabled,
         config.cricketSyncEnabled,
@@ -384,8 +381,10 @@ fun FootballLiveTvApp(
     ) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                runCatching { repository.refreshLiveMatches(force = false) }
-                val intervalMs = config.autoRefreshIntervalSec.coerceIn(15, 120) * 1000L
+                if (currentScreen != AppScreen.PLAYER && !isInPipMode) {
+                    runCatching { repository.refreshLiveMatches(force = false) }
+                }
+                val intervalMs = config.autoRefreshIntervalSec.coerceIn(25, 120) * 1000L
                 delay(intervalMs)
             }
         }
@@ -912,13 +911,20 @@ fun FootballLiveTvApp(
                 onWatchHighlight = { highlightUrl ->
                     showStreamPickerModal = false
                     streamPickerMatch = null
-                    val stream = StreamSource(
-                        id = "highlight-${latestMatch.id}",
-                        name = "${latestMatch.team1Code} vs ${latestMatch.team2Code} Highlights",
-                        url = highlightUrl,
-                        quality = "HD"
-                    )
-                    startPlaying(latestMatch, stream.name, listOf(stream))
+                    val hlTitle = "${latestMatch.team1Code} vs ${latestMatch.team2Code} Highlights"
+                    coroutineScope.launch {
+                        val tempHl = HighlightItem(
+                            id = "highlight-${latestMatch.id}",
+                            title = hlTitle,
+                            tournament = latestMatch.tournament,
+                            duration = "Highlights",
+                            thumbnailUrl = "",
+                            videoUrl = highlightUrl,
+                            sport = latestMatch.sport
+                        )
+                        val resolved = repository.resolveHighlightStreamsOnDemand(tempHl)
+                        startPlaying(null, hlTitle, resolved)
+                    }
                 },
                 onWatchHighlightItem = { hl ->
                     openHighlightModal(hl)

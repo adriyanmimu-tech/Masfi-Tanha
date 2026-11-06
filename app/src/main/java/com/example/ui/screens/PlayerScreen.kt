@@ -76,6 +76,7 @@ fun PlayerScreen(
     val currentPosition by playerManager.currentPosition.collectAsState()
     val duration by playerManager.duration.collectAsState()
     val playbackSpeed by playerManager.playbackSpeed.collectAsState()
+    val isLowQualityMode by playerManager.isLowQualityMode.collectAsState()
 
     var isFullscreen by remember { mutableStateOf(false) }
     var isControlsLocked by remember { mutableStateOf(false) }
@@ -87,7 +88,7 @@ fun PlayerScreen(
         val currentIndex = streams.indexOfFirst { it.id == currentStream?.id }
         if (streams.isNotEmpty()) {
             val nextIndex = if (currentIndex in 0 until streams.size - 1) currentIndex + 1 else 0
-            playerManager.playStream(streams[nextIndex], forceLowQuality)
+            playerManager.playStream(streams[nextIndex], isLowQualityMode)
         }
     }
 
@@ -198,11 +199,13 @@ fun PlayerScreen(
                     isBuffering = isBuffering,
                     isLocked = isControlsLocked,
                     isMuted = isMuted,
+                    isLowQualityMode = isLowQualityMode,
                     currentPosition = currentPosition,
                     duration = duration,
                     currentStream = currentStream,
                     onToggleLock = { isControlsLocked = !isControlsLocked },
                     onToggleMute = { playerManager.toggleMute() },
+                    onToggleLowQuality = { playerManager.toggleLowQualityMode() },
                     onPlayPause = { if (isPlaying) playerManager.pause() else playerManager.resume() },
                     onRewind = { playerManager.seekRelative(-10_000) },
                     onForward = { playerManager.seekRelative(10_000) },
@@ -267,6 +270,7 @@ fun PlayerScreen(
                         isBuffering = isBuffering,
                         isMuted = isMuted,
                         isLocked = isControlsLocked,
+                        isLowQualityMode = isLowQualityMode,
                         currentPosition = currentPosition,
                         duration = duration,
                         playbackSpeed = playbackSpeed,
@@ -274,6 +278,7 @@ fun PlayerScreen(
                         autoFallbackCountdown = autoFallbackCountdown,
                         onBack = onBackClick,
                         onToggleMute = { playerManager.toggleMute() },
+                        onToggleLowQuality = { playerManager.toggleLowQualityMode() },
                         onToggleLock = { isControlsLocked = !isControlsLocked },
                         onPlayPause = { if (isPlaying) playerManager.pause() else playerManager.resume() },
                         onRewind = { playerManager.seekRelative(-10_000) },
@@ -301,14 +306,14 @@ fun PlayerScreen(
                         },
                         onPiP = onEnterPiP,
                         onRetry = {
-                            currentStream?.let { playerManager.playStream(it, forceLowQuality) }
+                            currentStream?.let { playerManager.playStream(it, isLowQualityMode) }
                         },
                         onPickAnotherStream = { showStreamPickerModal = true },
                         onNextFallback = { switchToNextAvailableStream() }
                     )
                 }
 
-                // Horizontal Streams Available Buttons
+                // Horizontal Streams Available Buttons + Smooth SD Toggle
                 if (streams.isNotEmpty()) {
                     Row(
                         modifier = Modifier
@@ -319,12 +324,48 @@ fun PlayerScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // 1-Tap Smooth Mode / Data Saver Chip
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(
+                                    1.5.dp,
+                                    if (isLowQualityMode) GoldYellow else NavyBorder,
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .clickable { playerManager.toggleLowQualityMode() }
+                                .testTag("player_smooth_sd_toggle"),
+                            color = if (isLowQualityMode) GoldYellow.copy(alpha = 0.16f) else NavySurfaceVariant,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Tune,
+                                    contentDescription = "Quality Mode",
+                                    tint = if (isLowQualityMode) GoldYellow else CyanAccent,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = if (isLowQualityMode) "Smooth SD: ON" else "Quality: Auto HD",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (isLowQualityMode) GoldYellow else TextPrimary,
+                                        fontSize = 11.5.sp
+                                    )
+                                )
+                            }
+                        }
+
                         streams.forEach { stream ->
                             val isSelected = currentStream?.id == stream.id
                             StreamChipButton(
                                 stream = stream,
                                 isSelected = isSelected,
-                                onClick = { playerManager.playStream(stream, forceLowQuality) }
+                                onClick = { playerManager.playStream(stream, isLowQualityMode) }
                             )
                         }
 
@@ -569,6 +610,7 @@ fun PortraitVideoControlsOverlay(
     isBuffering: Boolean,
     isMuted: Boolean,
     isLocked: Boolean,
+    isLowQualityMode: Boolean = false,
     currentPosition: Long,
     duration: Long,
     playbackSpeed: Float = 1.0f,
@@ -576,6 +618,7 @@ fun PortraitVideoControlsOverlay(
     autoFallbackCountdown: Int = 0,
     onBack: () -> Unit,
     onToggleMute: () -> Unit,
+    onToggleLowQuality: () -> Unit = {},
     onToggleLock: () -> Unit,
     onPlayPause: () -> Unit,
     onRewind: () -> Unit,
@@ -714,6 +757,25 @@ fun PortraitVideoControlsOverlay(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Low Quality / Smooth SD Toggle Chip
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isLowQualityMode) GoldYellow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.15f))
+                            .border(0.8.dp, if (isLowQualityMode) GoldYellow else CyanAccent.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                            .clickable(onClick = onToggleLowQuality)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (isLowQualityMode) "SD 480p" else "AUTO HD",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isLowQualityMode) GoldYellow else CyanAccent,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 9.5.sp
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
                     // Speed Chip
                     Box(
                         modifier = Modifier
@@ -863,11 +925,13 @@ fun FullscreenPlayerOverlay(
     isBuffering: Boolean,
     isLocked: Boolean,
     isMuted: Boolean,
+    isLowQualityMode: Boolean = false,
     currentPosition: Long,
     duration: Long,
     currentStream: StreamSource?,
     onToggleLock: () -> Unit,
     onToggleMute: () -> Unit,
+    onToggleLowQuality: () -> Unit = {},
     onPlayPause: () -> Unit,
     onRewind: () -> Unit,
     onForward: () -> Unit,
@@ -939,6 +1003,25 @@ fun FullscreenPlayerOverlay(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Smooth SD / Auto HD Toggle in Fullscreen
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isLowQualityMode) GoldYellow.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.15f))
+                            .border(1.dp, if (isLowQualityMode) GoldYellow else CyanAccent, RoundedCornerShape(8.dp))
+                            .clickable(onClick = onToggleLowQuality)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isLowQualityMode) "SD 480p" else "AUTO HD",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isLowQualityMode) GoldYellow else CyanAccent,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
                     // Mute / Unmute
                     IconButton(onClick = onToggleMute) {
                         Icon(

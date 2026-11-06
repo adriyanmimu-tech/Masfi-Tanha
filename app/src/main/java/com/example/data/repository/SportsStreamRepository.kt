@@ -1011,16 +1011,20 @@ class SportsStreamRepository(
      */
     suspend fun resolveHighlightStreamsOnDemand(highlight: HighlightItem): List<StreamSource> = withContext(Dispatchers.IO) {
         val url = highlight.videoUrl.trim()
-        if (url.endsWith(".txt", ignoreCase = true) && (url.contains("prohigh") || url.contains("pro/"))) {
-            val resolved = playlistMatcherService.resolvePlayzStreamsForPointer(url, highlight.id)
-            if (resolved.isNotEmpty()) return@withContext resolved
+        if (url.endsWith(".txt", ignoreCase = true)) {
+            val resolved = playlistMatcherService.resolvePlayzStreamsForPointer(url, highlight.id, forceRefresh = false)
+                .ifEmpty {
+                    playlistMatcherService.resolvePlayzStreamsForPointer(url, highlight.id, forceRefresh = true)
+                }
+            return@withContext resolved
         }
+        if (url.isBlank()) return@withContext emptyList()
         listOf(
             StreamSource(
                 id = highlight.id,
                 name = highlight.title,
                 url = url,
-                quality = "FHD"
+                quality = "HD"
             )
         )
     }

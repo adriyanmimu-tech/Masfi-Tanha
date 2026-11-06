@@ -106,44 +106,58 @@ class ExoPlayerManager(private val context: Context) {
     private val _playbackSpeed = MutableStateFlow(1.0f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
+    private val _isLowQualityMode = MutableStateFlow(false)
+    val isLowQualityMode: StateFlow<Boolean> = _isLowQualityMode.asStateFlow()
+
     private var positionUpdateJob: Job? = null
     private var stallWatchdogJob: Job? = null
     private val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val ioScope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var fallbackCandidates: List<StreamSource> = emptyList()
     private var failedStreamUrls = mutableSetOf<String>()
-    private val preWarmedUrls = Collections.synchronizedSet(LinkedHashSet<String>())
+    private val preWarmedHosts = Collections.synchronizedSet(LinkedHashSet<String>())
     private val dnsCache = java.util.concurrent.ConcurrentHashMap<String, List<InetAddress>>()
     private var currentForceLowQuality: Boolean = false
     private var sharedBandwidthMeter: DefaultBandwidthMeter? = null
 
     /**
-     * Detects current network speed (from ExoPlayer's real-time DefaultBandwidthMeter + Android NetworkCapabilities)
-     * and returns the optimal maximum video bitrate so slow internet automatically plays in Low Quality without buffering.
+     * Detects initial network speed so slow connections start at a safe bitrate,
+     * while leaving runtime adaptation to ExoPlayer's native AdaptiveTrackSelection without re-buffering.
      */
-    private fun computeAutoNetworkMaxBitrate(forceLowQuality: Boolean): Pair<Int, Boolean> {
-        if (forceLowQuality) return 750_000 to true
+    private fun computeInitialMaxBitrate(forceLowQuality: Boolean): Pair<Int, Boolean> {
+        if (forceLowQuality) return 800_000 to true
 
         val measuredBps = sharedBandwidthMeter?.bitrateEstimate ?: -1L
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val caps = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
         val systemDownKbps = caps?.linkDownstreamBandwidthKbps ?: 0
 
-        // If real-time measured bitrate is available and valid
         if (measuredBps in 50_000L..100_000_000L) {
             return when {
-                measuredBps < 950_000L -> 650_000 to true       // Slow internet -> Auto Low Quality (SD)
-                measuredBps < 1_800_000L -> 1_250_000 to false  // Moderate-slow internet -> Smooth 480p/540p
-                measuredBps < 3_200_000L -> 2_200_000 to false  // Good internet -> 720p HD
-                else -> 6_500_000 to false                      // Fast internet -> 1080p FHD
+                measuredBps < 900_000L -> 800_000 to true
+                measuredBps < 1_800_000L -> 1_600_000 to false
+                else -> Int.MAX_VALUE to false
             }
         }
 
-        // Fallback to OS link downstream estimate before first segment is measured
-        if (systemDownKbps in 1..1500) {
-            return 700_000 to true // Slow cellular/Wi-Fi -> Auto Low Quality (SD)
+        if (systemDownKbps in 1..1200) {
+            return 800_000 to true
         }
-        return 2_800_000 to false // Safe balanced initial start so first frame loads fast
+        return Int.MAX_VALUE to false
+    }
+
+    private fun isVodOrHighlightStream(stream: StreamSource?): Boolean {
+        if (stream == null) return false
+        val cleanUrl = stream.url.substringBefore("|").trim().lowercase(Locale.US)
+        val idLower = stream.id.lowercase(Locale.US)
+        val nameLower = stream.name.lowercase(Locale.US)
+        return cleanUrl.contains(".mp4") ||
+            cleanUrl.contains(".mkv") ||
+            cleanUrl.contains(".webm") ||
+            idLower.startsWith("pz-hl-") ||
+            idLower.startsWith("highlight") ||
+            nameLower.contains("highlight") ||
+            nameLower.contains("recap")
     }
 
     // Fast in-memory DNS cache + IPv4 preference to avoid slow DNS lookups on stream/segment switches
@@ -160,13 +174,13 @@ class ExoPlayerManager(private val context: Context) {
         }
     }
 
-    // Shared high-performance OkHttpClient with HTTP/2, fast DNS & warm connection pool for zero-stall chunk loading
+    // Shared high-performance OkHttpClient with HTTP/2, fast DNS & generous read timeout for Highlights & Live CDNs
     private val streamHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .dns(fastDns)
             .connectionPool(ConnectionPool(24, 5, TimeUnit.MINUTES))
-            .connectTimeout(12, TimeUnit.SECONDS)
-            .readTimeout(18, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
@@ -174,22 +188,22 @@ class ExoPlayerManager(private val context: Context) {
     }
 
     // Fast chunk retry policy so transient network drops never freeze Highlights or Live streams
-    private val resilientLoadErrorPolicy: LoadErrorHandlingPolicy = object : DefaultLoadErrorHandlingPolicy(10) {
+    private val resilientLoadErrorPolicy: LoadErrorHandlingPolicy = object : DefaultLoadErrorHandlingPolicy(12) {
         override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
             val errorCount = loadErrorInfo.errorCount
             return when {
-                errorCount <= 3 -> 250L
-                errorCount <= 6 -> 600L
-                else -> 1200L
+                errorCount <= 3 -> 300L
+                errorCount <= 6 -> 700L
+                else -> 1500L
             }
         }
 
-        override fun getMinimumLoadableRetryCount(dataType: Int): Int = 10
+        override fun getMinimumLoadableRetryCount(dataType: Int): Int = 12
     }
 
     /**
-     * System 3: Background DNS + TCP + TLS Connection Pre-Warming.
-     * Pre-establishes warm HTTP/2 connections to streaming servers so clicking Play starts in ~0.4s.
+     * Pre-warms DNS resolution in the background without opening competing HTTP byte-range sockets
+     * that could throttle single-connection Highlight (.mp4) or HLS servers.
      */
     fun preWarmStreams(streams: List<StreamSource>) {
         if (streams.isEmpty()) return
@@ -198,23 +212,11 @@ class ExoPlayerManager(private val context: Context) {
                 .filter { it.isEnabled && it.url.isNotBlank() }
                 .take(5)
                 .forEach { stream ->
-                    val spec = parseStreamSpec(stream)
-                    val cleanUrl = spec.cleanUrl
-                    if (cleanUrl.startsWith("http", ignoreCase = true) &&
-                        !cleanUrl.endsWith(".txt", ignoreCase = true) &&
-                        preWarmedUrls.add(cleanUrl)
-                    ) {
+                    val cleanUrl = stream.url.substringBefore("|").trim()
+                    val host = runCatching { Uri.parse(cleanUrl).host }.getOrNull()
+                    if (!host.isNullOrBlank() && preWarmedHosts.add(host)) {
                         launch {
-                            runCatching {
-                                val reqBuilder = Request.Builder()
-                                    .url(cleanUrl)
-                                    .header("User-Agent", spec.userAgent)
-                                    .header("Range", "bytes=0-1023")
-                                spec.headers.forEach { (k, v) -> reqBuilder.header(k, v) }
-                                streamHttpClient.newCall(reqBuilder.build()).execute().use { resp ->
-                                    resp.body?.source()?.request(512)
-                                }
-                            }
+                            runCatching { fastDns.lookup(host) }
                         }
                     }
                 }
@@ -225,37 +227,60 @@ class ExoPlayerManager(private val context: Context) {
         val valid = candidates.filter { it.isEnabled && it.url.isNotBlank() }
         fallbackCandidates = valid
         currentForceLowQuality = forceLowQuality
+        _isLowQualityMode.value = forceLowQuality
         preWarmStreams(valid)
+    }
+
+    fun toggleLowQualityMode(): Boolean {
+        val next = !_isLowQualityMode.value
+        setLowQualityMode(next)
+        return next
+    }
+
+    fun setLowQualityMode(enabled: Boolean) {
+        currentForceLowQuality = enabled
+        _isLowQualityMode.value = enabled
+        exoPlayer?.let { player ->
+            val builder = player.trackSelectionParameters.buildUpon()
+            if (enabled) {
+                builder.setMaxVideoSizeSd()
+                builder.setMaxVideoBitrate(800_000)
+            } else {
+                builder.clearVideoSizeConstraints()
+                builder.setMaxVideoBitrate(Int.MAX_VALUE)
+            }
+            player.trackSelectionParameters = builder.build()
+        }
     }
 
     fun getPlayer(): ExoPlayer {
         if (exoPlayer == null) {
-            // Warm up disk cache in background on first player initialization
-            ioScope.launch { getOrCreateDiskCache(context) }
-
             val renderersFactory = DefaultRenderersFactory(context)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                 .setEnableDecoderFallback(true)
 
-            // System 2: Zero-Freeze Adaptive Bitrate Track Selector
-            // Starts quickly and downshifts resolution in 1.2s if internet slows down so video never pauses
+            // Smooth Native Adaptive Bitrate Track Selector:
+            // Avoids premature quality jumps and steps down smoothly without flushing playback buffers.
             val trackSelector = DefaultTrackSelector(
                 context,
                 AdaptiveTrackSelection.Factory(
-                    2_200,  // minDurationForQualityIncreaseMs (confirm 2.2s stable speed before raising quality)
-                    1_200,  // maxDurationForQualityDecreaseMs (drop to Low Quality in 1.2s when internet dips)
-                    2_500,  // minDurationToRetainAfterDiscardMs
+                    6_000,  // minDurationForQualityIncreaseMs (confirm 6s stable speed before raising quality)
+                    2_000,  // maxDurationForQualityDecreaseMs (step down in 2s when internet dips)
+                    5_000,  // minDurationToRetainAfterDiscardMs (keep 5s buffered so switches never stutter)
                     0.70f   // bandwidthFraction (30% safety headroom so slow networks never choke)
                 )
             )
 
-            // Deep 30s-120s buffer + 0.55s instant start + 30s RAM back-buffer
+            // Anti-Stutter Buffer Window:
+            // - 2.5s start buffer ensures a full segment is ready before first frame plays (prevents 1s play -> buffer cycle)
+            // - 5.0s re-buffer cushion ensures recovery plays continuously without stopping every few seconds
+            // - 25s–120s deep ahead buffer keeps Highlights and Live streams smooth
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    30_000,  // min buffer 30s ahead
+                    25_000,  // min buffer 25s ahead
                     120_000, // max buffer 120s (2 mins deep pre-buffer for highlights & live)
-                    550,     // playback start buffer 0.55s (instant start on tap)
-                    1_200    // re-buffer 1.2s (ultra-fast recovery)
+                    2_500,   // playback start buffer 2.5s (smooth start without immediate stall)
+                    5_000    // re-buffer 5.0s (builds solid cushion so playback doesn't stop every few seconds)
                 )
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .setBackBuffer(30_000, true) // 30s back-buffer in RAM so rewind is zero-lag
@@ -369,48 +394,30 @@ class ExoPlayerManager(private val context: Context) {
     }
 
     /**
-     * System 2 & System 4: Two-Stage Anti-Stall Watchdog + Smart Multi-Link Auto-Failover.
-     * - Stage 1 (3.5s buffering): Automatically shifts down max video bitrate so congested links resume immediately.
-     * - Stage 2 (7.5s buffering): Automatically switches to the next backup server link if available, or re-prepares at current position.
+     * Non-Destructive Stall Watchdog:
+     * - Never resets `prepare()` on single-server Highlights/VOD (so slow MP4 headers/chunks can finish downloading).
+     * - Only fails over to a backup server if `fallbackCandidates.size > 1` and the current server is completely stuck.
      */
     private fun startStallWatchdog() {
         stallWatchdogJob?.cancel()
         stallWatchdogJob = scope.launch {
-            // Stage 1: After 3.5s of buffering, step down bitrate to force immediate lower-bitrate segment selection
-            delay(3_500L)
-            val p1 = exoPlayer ?: return@launch
-            if (p1.playbackState == Player.STATE_BUFFERING && p1.playWhenReady) {
-                p1.trackSelectionParameters = p1.trackSelectionParameters
-                    .buildUpon()
-                    .setMaxVideoBitrate(1_400_000)
-                    .build()
-            } else {
-                return@launch
-            }
+            val activeStream = _currentStream.value
+            val isVod = isVodOrHighlightStream(activeStream) ||
+                ((exoPlayer?.duration ?: 0L) > 0L && exoPlayer?.isCurrentMediaItemLive == false)
 
-            // Stage 2: If still buffering after another 4.0s (total 7.5s), auto-failover to next server or fast-resume
-            delay(4_000L)
-            val p2 = exoPlayer ?: return@launch
-            if (p2.playbackState == Player.STATE_BUFFERING && p2.playWhenReady) {
+            // Give VOD/Highlights 16s to buffer initial MP4 atoms; give Live streams 11s before backup failover
+            val waitMs = if (isVod) 16_000L else 11_000L
+            delay(waitMs)
+
+            val p = exoPlayer ?: return@launch
+            if (p.playbackState == Player.STATE_BUFFERING && p.playWhenReady && fallbackCandidates.size > 1) {
                 val currentUrl = _currentStream.value?.url.orEmpty()
-                val nextCandidate = if (fallbackCandidates.size > 1) {
-                    if (currentUrl.isNotBlank()) failedStreamUrls.add(currentUrl)
-                    fallbackCandidates.firstOrNull { candidate ->
-                        candidate.url.isNotBlank() && candidate.url !in failedStreamUrls
-                    }
-                } else {
-                    null
+                if (currentUrl.isNotBlank()) failedStreamUrls.add(currentUrl)
+                val nextCandidate = fallbackCandidates.firstOrNull { candidate ->
+                    candidate.url.isNotBlank() && candidate.url !in failedStreamUrls
                 }
-
                 if (nextCandidate != null) {
                     playStreamInternal(nextCandidate, currentForceLowQuality, resetFailedSet = false)
-                } else {
-                    val pos = p2.currentPosition.coerceAtLeast(0L)
-                    p2.prepare()
-                    if (p2.duration > 0L && pos > 0L) {
-                        p2.seekTo(pos)
-                    }
-                    p2.playWhenReady = true
                 }
             }
         }
@@ -424,27 +431,10 @@ class ExoPlayerManager(private val context: Context) {
     private fun startPositionTracking() {
         positionUpdateJob?.cancel()
         positionUpdateJob = scope.launch {
-            var tickCount = 0
             while (true) {
                 exoPlayer?.let { p ->
                     _currentPosition.value = p.currentPosition.coerceAtLeast(0L)
                     _duration.value = p.duration.coerceAtLeast(0L)
-                    // Every 3 seconds, dynamically adapt max video bitrate & SD constraint to real-time network speed
-                    tickCount++
-                    if (tickCount % 6 == 0 && p.isPlaying) {
-                        val (targetBitrate, constrainSd) = computeAutoNetworkMaxBitrate(currentForceLowQuality)
-                        val currentMax = p.trackSelectionParameters.maxVideoBitrate
-                        if (kotlin.math.abs(currentMax - targetBitrate) > 300_000) {
-                            val builder = p.trackSelectionParameters.buildUpon()
-                                .setMaxVideoBitrate(targetBitrate)
-                            if (constrainSd) {
-                                builder.setMaxVideoSizeSd()
-                            } else {
-                                builder.clearVideoSizeConstraints()
-                            }
-                            p.trackSelectionParameters = builder.build()
-                        }
-                    }
                 }
                 delay(500)
             }
@@ -472,7 +462,7 @@ class ExoPlayerManager(private val context: Context) {
         exoPlayer?.setPlaybackSpeed(speed)
     }
 
-    fun playStream(stream: StreamSource, forceLowQuality: Boolean = false) {
+    fun playStream(stream: StreamSource, forceLowQuality: Boolean = currentForceLowQuality) {
         playStreamInternal(stream, forceLowQuality, resetFailedSet = true)
     }
 
@@ -494,6 +484,7 @@ class ExoPlayerManager(private val context: Context) {
             failedStreamUrls.clear()
         }
         currentForceLowQuality = forceLowQuality
+        _isLowQualityMode.value = forceLowQuality
 
         try {
             val player = getPlayer()
@@ -501,7 +492,7 @@ class ExoPlayerManager(private val context: Context) {
             _errorMessage.value = null
             _isBuffering.value = true
 
-            val (initialMaxBitrate, constrainSd) = computeAutoNetworkMaxBitrate(forceLowQuality)
+            val (initialMaxBitrate, constrainSd) = computeInitialMaxBitrate(forceLowQuality)
             player.trackSelectionParameters = if (constrainSd) {
                 player.trackSelectionParameters
                     .buildUpon()
@@ -704,7 +695,7 @@ class ExoPlayerManager(private val context: Context) {
                     .setMimeType(MimeTypes.APPLICATION_MPD)
                     .setLiveConfiguration(
                         MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(4_000)
+                            .setTargetOffsetMs(6_000)
                             .setMaxPlaybackSpeed(1.02f)
                             .build()
                     )
@@ -721,7 +712,7 @@ class ExoPlayerManager(private val context: Context) {
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                     .setLiveConfiguration(
                         MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(4_000)
+                            .setTargetOffsetMs(6_000)
                             .setMaxPlaybackSpeed(1.02f)
                             .build()
                     )
@@ -734,18 +725,10 @@ class ExoPlayerManager(private val context: Context) {
                     .createMediaSource(mediaItem)
             }
             else -> {
-                // System 1: 150MB Disk Cache (SimpleCache) for Highlights & progressive MP4 streams
-                // Eliminates re-buffering when seeking or rewatching highlights and accelerates byte-range reads
-                val cachedDataSourceFactory: DataSource.Factory = getOrCreateDiskCache(context)?.let { diskCache ->
-                    CacheDataSource.Factory()
-                        .setCache(diskCache)
-                        .setUpstreamDataSourceFactory(okHttpDataSourceFactory)
-                        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                } ?: okHttpDataSourceFactory
-
+                // Direct OkHttp progressive streaming for MP4 Highlights with default 1MB interval
+                // so HTTP 206 Byte-Range requests and MOOV atom seeks start decoding immediately
                 val mediaItem = MediaItem.fromUri(uri)
-                ProgressiveMediaSource.Factory(cachedDataSourceFactory)
-                    .setContinueLoadingCheckIntervalBytes(2 * 1024 * 1024) // 2MB smooth read chunks for MP4 Highlights
+                ProgressiveMediaSource.Factory(okHttpDataSourceFactory)
                     .setLoadErrorHandlingPolicy(resilientLoadErrorPolicy)
                     .setDrmSessionManagerProvider(drmProvider)
                     .createMediaSource(mediaItem)

@@ -815,39 +815,66 @@ class LivePlaylistMatcherService(
         parsed
     }
 
+    private val tokenResolveClient: OkHttpClient = httpClient.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
     private fun resolvePlayzWorkerTokenUrl(workerApiUrl: String, linkKey: String = "playback_url"): String? {
-        val cleanApi = workerApiUrl.trim()
+        val cleanApi = workerApiUrl.trim().substringBefore("|").trim()
         if (!cleanApi.startsWith("http://", true) && !cleanApi.startsWith("https://", true)) return null
         return try {
-            val req = Request.Builder()
+            val originMatch = Regex("""^(https?://[^/]+)""", RegexOption.IGNORE_CASE)
+                .find(cleanApi)?.groupValues?.getOrNull(1)
+            val reqBuilder = Request.Builder()
                 .url(cleanApi)
                 .get()
-                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36")
-                .build()
-            probeClient.newCall(req).execute().use { resp ->
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+                )
+            if (!originMatch.isNullOrBlank()) {
+                reqBuilder.header("Referer", "$originMatch/")
+            }
+            tokenResolveClient.newCall(reqBuilder.build()).execute().use { resp ->
                 if (!resp.isSuccessful) return null
+                val contentType = resp.header("Content-Type", "").orEmpty().lowercase(Locale.US)
+                // If the URL itself is already a direct video/HLS stream, return it immediately without reading the whole body
+                if (contentType.contains("mpegurl") ||
+                    contentType.contains("video/") ||
+                    contentType.contains("dash+xml") ||
+                    contentType.contains("octet-stream")
+                ) {
+                    return workerApiUrl.trim()
+                }
                 val bodyStr = resp.body?.string()?.trim().orEmpty()
+                if (bodyStr.startsWith("#EXTM3U", ignoreCase = true)) {
+                    return workerApiUrl.trim()
+                }
                 if (bodyStr.startsWith("{")) {
                     val json = JSONObject(bodyStr)
                     val rawPlayback = json.optString(linkKey.ifBlank { "playback_url" }, "")
                         .ifBlank { json.optString("playback_url", "") }
                         .ifBlank { json.optString("url", "") }
+                        .ifBlank { json.optString("file", "") }
+                        .ifBlank { json.optString("stream", "") }
                         .trim()
                     if (rawPlayback.isBlank()) return null
                     decodeWorkerPlaybackUrl(rawPlayback)
                 } else {
-                    // Support HTML embed players (e.g. soccerfull.net/play/... containing var m3u8Url = "...")
-                    val extractedM3u8 = Regex("""var\s+m3u8Url\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-                        .find(bodyStr)?.groupValues?.getOrNull(1)
-                        ?: Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)""", RegexOption.IGNORE_CASE)
-                            .find(bodyStr)?.groupValues?.getOrNull(1)
-                    if (!extractedM3u8.isNullOrBlank()) {
-                        val originMatch = Regex("""^(https?://[^/]+)""", RegexOption.IGNORE_CASE)
-                            .find(cleanApi)?.groupValues?.getOrNull(1)
-                        if (!originMatch.isNullOrBlank() && !extractedM3u8.contains("|")) {
-                            "$extractedM3u8|referer=$originMatch/&origin=$originMatch"
+                    // Support HTML embed players (e.g. soccerfull.net/play/... containing var m3u8Url = "...", file: "...", etc.)
+                    val unescapedBody = bodyStr.replace("\\/", "/")
+                    val extractedStream = Regex("""(?:m3u8Url|videoUrl|streamUrl|hlsUrl|file|source|src)\s*[:=]\s*["'](https?://[^"'\s<>]+)["']""", RegexOption.IGNORE_CASE)
+                        .find(unescapedBody)?.groupValues?.getOrNull(1)
+                        ?: Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4|mpd)[^\s"'<>]*)""", RegexOption.IGNORE_CASE)
+                            .find(unescapedBody)?.groupValues?.getOrNull(1)
+                    if (!extractedStream.isNullOrBlank()) {
+                        if (!originMatch.isNullOrBlank() && !extractedStream.contains("|")) {
+                            "$extractedStream|referer=$cleanApi&origin=$originMatch"
                         } else {
-                            extractedM3u8
+                            extractedStream
                         }
                     } else {
                         null
@@ -874,6 +901,19 @@ class LivePlaylistMatcherService(
         return if (pipePart.isNotBlank()) "$decodedUrl|$pipePart" else decodedUrl
     }
 
+    private fun isLikelyEmbedOrWorkerPage(url: String): Boolean {
+        val clean = url.substringBefore("|").trim().lowercase(Locale.US)
+        if (!clean.startsWith("http://") && !clean.startsWith("https://")) return false
+        if (clean.contains(".m3u8") || clean.contains(".mpd") || clean.contains(".mp4") || clean.contains(".ts")) {
+            return false
+        }
+        return clean.contains("workers.dev") ||
+            clean.contains("soccerfull.") ||
+            clean.contains("/play/") ||
+            clean.contains("/embed/") ||
+            clean.contains("player.")
+    }
+
     internal fun parsePlayzStreamItemsJson(
         decryptedJson: String,
         idPrefix: String = "pz"
@@ -892,7 +932,7 @@ class LivePlaylistMatcherService(
                 }
                 if (!itemObj.optBoolean("visible", true)) continue
                 val name = itemObj.optString("name", "Server ${i + 1}").trim().ifBlank { "Server ${i + 1}" }
-                val rawLinkField = itemObj.optString("link", "").trim()
+                val rawLinkField = decodeWorkerPlaybackUrl(itemObj.optString("link", "").trim())
 
                 val tokenApiRaw = itemObj.opt("tokenApi")
                 val tokenApiObj = when (tokenApiRaw) {
@@ -916,14 +956,14 @@ class LivePlaylistMatcherService(
                     (tokenType.equals("sp", ignoreCase = true) || tokenType.equals("embed", ignoreCase = true) || rawLinkField.isBlank()) &&
                         tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
                         resolvePlayzWorkerTokenUrl(tokenApiEndpoint, tokenLinkKey)
-                            ?: if (rawLinkField.contains("workers.dev", ignoreCase = true)) {
-                                resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: ""
+                            ?: if (isLikelyEmbedOrWorkerPage(rawLinkField)) {
+                                resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: rawLinkField
                             } else {
                                 rawLinkField
                             }
                     }
-                    rawLinkField.contains("workers.dev/?q=", ignoreCase = true) -> {
-                        resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: ""
+                    isLikelyEmbedOrWorkerPage(rawLinkField) -> {
+                        resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: rawLinkField
                     }
                     else -> rawLinkField
                 }.trim()
@@ -939,11 +979,24 @@ class LivePlaylistMatcherService(
                 val apiField = itemObj.optString("api", "").trim()
                 val isDash = baseLink.contains(".mpd", ignoreCase = true)
                 val drmLicense = if (apiField.contains(":") || apiField.startsWith("http", true)) apiField else null
+                val itemUserAgent = itemObj.optString("userAgent", "")
+                    .ifBlank { itemObj.optString("user_agent", "") }
+                    .ifBlank { itemObj.optString("ua", "") }
+                    .trim()
+                    .ifBlank { null }
+                val itemReferer = itemObj.optString("referer", "")
+                    .ifBlank { itemObj.optString("referrer", "") }
+                    .trim()
+                    .ifBlank { null }
+                val itemOrigin = itemObj.optString("origin", "").trim().ifBlank { null }
+                val itemCookie = itemObj.optString("cookie", "").trim().ifBlank { null }
+
                 val quality = when {
                     name.contains("FHD", true) || name.contains("1080", true) || name.contains("UHD", true) -> "FHD"
-                    name.contains("SD", true) || name.contains("LOW", true) -> "SD"
+                    name.contains("SD", true) || name.contains("LOW", true) || name.contains("480", true) -> "SD"
+                    name.contains("HD", true) || name.contains("720", true) -> "HD"
                     isDash -> "FHD"
-                    else -> "FHD"
+                    else -> "HD"
                 }
 
                 list.add(
@@ -952,6 +1005,10 @@ class LivePlaylistMatcherService(
                         name = name,
                         quality = quality,
                         url = rawLink,
+                        userAgent = itemUserAgent,
+                        referer = itemReferer,
+                        origin = itemOrigin,
+                        cookie = itemCookie,
                         drmLicense = drmLicense,
                         drmScheme = if (drmLicense != null) "clearkey" else null,
                         isDefault = false,
