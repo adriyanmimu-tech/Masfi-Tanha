@@ -119,32 +119,7 @@ class ExoPlayerManager(private val context: Context) {
     private val dnsCache = java.util.concurrent.ConcurrentHashMap<String, List<InetAddress>>()
     private var currentForceLowQuality: Boolean = false
     private var sharedBandwidthMeter: DefaultBandwidthMeter? = null
-
-    /**
-     * Detects initial network speed so slow connections start at a safe bitrate,
-     * while leaving runtime adaptation to ExoPlayer's native AdaptiveTrackSelection without re-buffering.
-     */
-    private fun computeInitialMaxBitrate(forceLowQuality: Boolean): Pair<Int, Boolean> {
-        if (forceLowQuality) return 800_000 to true
-
-        val measuredBps = sharedBandwidthMeter?.bitrateEstimate ?: -1L
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val caps = cm?.activeNetwork?.let { cm.getNetworkCapabilities(it) }
-        val systemDownKbps = caps?.linkDownstreamBandwidthKbps ?: 0
-
-        if (measuredBps in 50_000L..100_000_000L) {
-            return when {
-                measuredBps < 900_000L -> 800_000 to true
-                measuredBps < 1_800_000L -> 1_600_000 to false
-                else -> Int.MAX_VALUE to false
-            }
-        }
-
-        if (systemDownKbps in 1..1200) {
-            return 800_000 to true
-        }
-        return Int.MAX_VALUE to false
-    }
+    private var hasReachedReadyForCurrentStream: Boolean = false
 
     private fun isVodOrHighlightStream(stream: StreamSource?): Boolean {
         if (stream == null) return false
@@ -321,17 +296,17 @@ class ExoPlayerManager(private val context: Context) {
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
 
-            // Smooth Native Adaptive Bitrate Track Selector:
-            // Avoids premature quality jumps and steps down smoothly without flushing playback buffers.
+            // Match reference APK (sd5yox.apk) DefaultTrackSelector + AdaptiveTrackSelection
             val trackSelector = DefaultTrackSelector(
                 context,
-                AdaptiveTrackSelection.Factory(
-                    6_000,  // minDurationForQualityIncreaseMs (confirm 6s stable speed before raising quality)
-                    2_000,  // maxDurationForQualityDecreaseMs (step down in 2s when internet dips)
-                    5_000,  // minDurationToRetainAfterDiscardMs (keep 5s buffered so switches never stutter)
-                    0.75f   // bandwidthFraction (25% safety headroom so slow networks never choke)
+                AdaptiveTrackSelection.Factory()
+            ).apply {
+                setParameters(
+                    buildUponParameters()
+                        .setExceedVideoConstraintsIfNecessary(true)
+                        .setExceedRendererCapabilitiesIfNecessary(true)
                 )
-            )
+            }
 
             // Reference APK (Lhc/d) Buffer Window:
             // - 60s minBuffer / 120s maxBuffer continuously pre-fetches segments 1-2 minutes ahead
@@ -385,9 +360,12 @@ class ExoPlayerManager(private val context: Context) {
                                 Player.STATE_BUFFERING -> {
                                     _isBuffering.value = true
                                     _errorMessage.value = null
-                                    startStallWatchdog()
+                                    if (!hasReachedReadyForCurrentStream) {
+                                        startStallWatchdog()
+                                    }
                                 }
                                 Player.STATE_READY -> {
+                                    hasReachedReadyForCurrentStream = true
                                     _isBuffering.value = false
                                     _errorMessage.value = null
                                     stopStallWatchdog()
@@ -411,6 +389,7 @@ class ExoPlayerManager(private val context: Context) {
                         override fun onIsPlayingChanged(playing: Boolean) {
                             _isPlaying.value = playing
                             if (playing) {
+                                hasReachedReadyForCurrentStream = true
                                 _isBuffering.value = false
                                 stopStallWatchdog()
                                 startPositionTracking()
@@ -471,23 +450,24 @@ class ExoPlayerManager(private val context: Context) {
     }
 
     /**
-     * Non-Destructive Stall Watchdog:
-     * - Never resets `prepare()` on single-server Highlights/VOD (so slow MP4 headers/chunks can finish downloading).
-     * - Only fails over to a backup server if `fallbackCandidates.size > 1` and the current server is completely stuck.
+     * Initial-Connection Watchdog:
+     * - Only runs before a stream has reached STATE_READY for the first time.
+     * - Never interrupts an active stream mid-match during normal buffering recovery.
      */
     private fun startStallWatchdog() {
         stallWatchdogJob?.cancel()
         stallWatchdogJob = scope.launch {
             val activeStream = _currentStream.value
-            val isVod = isVodOrHighlightStream(activeStream) ||
-                ((exoPlayer?.duration ?: 0L) > 0L && exoPlayer?.isCurrentMediaItemLive == false)
-
-            // Give VOD/Highlights 16s to buffer initial MP4 atoms; give Live streams 11s before backup failover
-            val waitMs = if (isVod) 16_000L else 11_000L
+            val isVod = isVodOrHighlightStream(activeStream)
+            val waitMs = if (isVod) 18_000L else 15_000L
             delay(waitMs)
 
             val p = exoPlayer ?: return@launch
-            if (p.playbackState == Player.STATE_BUFFERING && p.playWhenReady && fallbackCandidates.size > 1) {
+            if (!hasReachedReadyForCurrentStream &&
+                p.playbackState == Player.STATE_BUFFERING &&
+                p.playWhenReady &&
+                fallbackCandidates.size > 1
+            ) {
                 val currentUrl = _currentStream.value?.url.orEmpty()
                 if (currentUrl.isNotBlank()) failedStreamUrls.add(currentUrl)
                 val nextCandidate = fallbackCandidates.firstOrNull { candidate ->
@@ -560,6 +540,7 @@ class ExoPlayerManager(private val context: Context) {
         if (resetFailedSet) {
             failedStreamUrls.clear()
         }
+        hasReachedReadyForCurrentStream = false
         currentForceLowQuality = forceLowQuality
         _isLowQualityMode.value = forceLowQuality
 
@@ -569,18 +550,17 @@ class ExoPlayerManager(private val context: Context) {
             _errorMessage.value = null
             _isBuffering.value = true
 
-            val (initialMaxBitrate, constrainSd) = computeInitialMaxBitrate(forceLowQuality)
-            player.trackSelectionParameters = if (constrainSd) {
+            player.trackSelectionParameters = if (forceLowQuality) {
                 player.trackSelectionParameters
                     .buildUpon()
                     .setMaxVideoSizeSd()
-                    .setMaxVideoBitrate(initialMaxBitrate)
+                    .setMaxVideoBitrate(800_000)
                     .build()
             } else {
                 player.trackSelectionParameters
                     .buildUpon()
                     .clearVideoSizeConstraints()
-                    .setMaxVideoBitrate(initialMaxBitrate)
+                    .setMaxVideoBitrate(Int.MAX_VALUE)
                     .build()
             }
 
@@ -770,12 +750,6 @@ class ExoPlayerManager(private val context: Context) {
                 val mediaItem = MediaItem.Builder()
                     .setUri(uri)
                     .setMimeType(MimeTypes.APPLICATION_MPD)
-                    .setLiveConfiguration(
-                        MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(6_000)
-                            .setMaxPlaybackSpeed(1.02f)
-                            .build()
-                    )
                     .build()
 
                 DashMediaSource.Factory(dashDataSourceFactory)
@@ -787,12 +761,6 @@ class ExoPlayerManager(private val context: Context) {
                 val mediaItem = MediaItem.Builder()
                     .setUri(uri)
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
-                    .setLiveConfiguration(
-                        MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(6_000)
-                            .setMaxPlaybackSpeed(1.02f)
-                            .build()
-                    )
                     .build()
 
                 HlsMediaSource.Factory(okHttpDataSourceFactory)
