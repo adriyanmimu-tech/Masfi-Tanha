@@ -11,7 +11,6 @@ import com.example.data.crex.CrexMatchDetailState
 import com.example.data.espn.EspnFootballService
 import com.example.data.model.*
 import com.example.data.playlist.LivePlaylistMatcherService
-import com.example.data.sofascore.SofaScoreMetadataService
 import com.example.data.util.TeamFlagResolver
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -39,7 +38,6 @@ class SportsStreamRepository(
     private val context: Context,
     val crexService: CrexCricketService = CrexCricketService(),
     val espnService: EspnFootballService = EspnFootballService(),
-    val sofascoreService: SofaScoreMetadataService = SofaScoreMetadataService(),
     val playlistMatcherService: LivePlaylistMatcherService = LivePlaylistMatcherService(),
     val cloudSyncRepository: CloudSyncRepository? = runCatching {
         if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) CloudSyncRepository(context) else null
@@ -282,8 +280,8 @@ class SportsStreamRepository(
                             val delId = obj.optString("id")
                             if (delId.isNotBlank()) deletedMatchIds.add(delId)
                         } else {
-                            val m = deserializeSingleMatch(obj)
-                            if (m.id !in LEGACY_DEMO_IDS) {
+                            val m = sanitizeMatchOverride(deserializeSingleMatch(obj))
+                            if (m != null && m.id !in LEGACY_DEMO_IDS) {
                                 cloudMatchOverrides[m.id] = m
                             }
                         }
@@ -336,8 +334,8 @@ class SportsStreamRepository(
                 val arr = JSONArray(savedOverridesJson)
                 for (i in 0 until arr.length()) {
                     val o = arr.optJSONObject(i) ?: continue
-                    val m = deserializeSingleMatch(o)
-                    if (m.id.isNotBlank() && m.id !in LEGACY_DEMO_IDS) {
+                    val m = sanitizeMatchOverride(deserializeSingleMatch(o))
+                    if (m != null && m.id.isNotBlank() && m.id !in LEGACY_DEMO_IDS) {
                         cloudMatchOverrides[m.id] = m
                     }
                 }
@@ -503,6 +501,25 @@ class SportsStreamRepository(
         }
         val pair = listOf(clean(team1), clean(team2)).sorted()
         return "${sport.name}:${pair[0]}::${pair[1]}"
+    }
+
+    private fun isFakeOrAutoMatchedStream(s: StreamSource): Boolean {
+        val cleanUrl = s.url.substringBefore("|").trim()
+        if (cleanUrl.isBlank() || cleanUrl.endsWith(".txt", ignoreCase = true) || cleanUrl.contains("workers.dev/?q=", ignoreCase = true)) return true
+        if (s.id.contains("-btn-") || s.id.contains("-pl-") || s.id.startsWith("espn-fb-s")) return true
+        if (s.name.contains(" • LIVE") || s.name.contains(" • Auto-Matched") || s.name.endsWith(" BST")) return true
+        return false
+    }
+
+    private fun sanitizeMatchOverride(m: LiveMatch): LiveMatch? {
+        val cleanStreams = m.streams.filterNot { isFakeOrAutoMatchedStream(it) }
+        if (cleanStreams.isEmpty() && m.provider != "ADMIN" && m.approvedHighlightUrl.isNullOrBlank()) {
+            return null
+        }
+        return m.copy(
+            streams = cleanStreams,
+            broadcastChannels = cleanStreams.map { it.name }.take(4)
+        )
     }
 
     /**
@@ -686,7 +703,11 @@ class SportsStreamRepository(
         }
 
         val allProviderMatches = (standaloneAdminMatches + rawPlayz).map { m ->
-            playlistMatcherService.enrichMatchWithAutoPlaylistStreams(m)
+            if (m.provider == "PLAYZ") {
+                playlistMatcherService.enrichMatchWithAutoPlaylistStreams(m)
+            } else {
+                m
+            }
         }
         val enrichedMatches = reconcileAndApplyAssociations(allProviderMatches)
 
@@ -896,35 +917,35 @@ class SportsStreamRepository(
         }
         val pointer = pointerFromStream ?: playlistMatcherService.getPlayzPointerForMatch(currentMatch)
         if (!pointer.isNullOrBlank()) {
-            val resolvedPlayzStreams = playlistMatcherService.resolvePlayzStreamsForPointer(pointer, currentMatch.id)
-            if (resolvedPlayzStreams.isNotEmpty()) {
-                val nonPlaceholderExisting = currentMatch.streams.filterNot {
-                    it.url.contains("pro/") && it.url.endsWith(".txt", ignoreCase = true)
-                }
-                val mergedStreams = (resolvedPlayzStreams + nonPlaceholderExisting)
-                    .distinctBy { "${it.url}|${it.drmLicense.orEmpty()}" }
-                    .sortedWith(
-                        compareBy<StreamSource> {
-                            !it.drmLicense.isNullOrBlank() || it.url.substringBefore("|").contains(".mpd", ignoreCase = true)
-                        }
+            val resolvedPlayzStreams = playlistMatcherService.resolvePlayzStreamsForPointer(
+                pointerPath = pointer,
+                matchIdPrefix = currentMatch.id,
+                forceRefresh = currentMatch.publicEnabledStreams().isEmpty()
+            )
+            val adminOverrideStreams = cloudMatchOverrides[currentMatch.id]?.streams
+                ?.filterNot { isFakeOrAutoMatchedStream(it) }
+                .orEmpty()
+            val mergedStreams = (resolvedPlayzStreams + adminOverrideStreams)
+                .distinctBy { "${it.name}|${it.url}|${it.drmLicense.orEmpty()}" }
+                .mapIndexed { idx, s ->
+                    s.copy(
+                        isDefault = idx == 0,
+                        priorityOrder = idx + 1,
+                        isBackup = false
                     )
-                    .mapIndexed { idx, s ->
-                        s.copy(
-                            isDefault = idx == 0,
-                            priorityOrder = idx + 1,
-                            isBackup = false
-                        )
-                    }
-                val updated = currentMatch.copy(streams = mergedStreams)
-                synchronized(playzProviderMatches) {
-                    val idx = playzProviderMatches.indexOfFirst { it.id == currentMatch.id }
-                    if (idx >= 0) {
-                        playzProviderMatches[idx] = updated
-                    }
                 }
-                rebuildCombinedMatches()
-                return@withContext _matches.value.find { it.id == matchId } ?: updated
+            val updated = currentMatch.copy(
+                streams = mergedStreams,
+                broadcastChannels = mergedStreams.map { it.name }.take(4)
+            )
+            synchronized(playzProviderMatches) {
+                val idx = playzProviderMatches.indexOfFirst { it.id == currentMatch.id }
+                if (idx >= 0) {
+                    playzProviderMatches[idx] = updated
+                }
             }
+            rebuildCombinedMatches()
+            return@withContext _matches.value.find { it.id == matchId } ?: updated
         }
         _matches.value.find { it.id == matchId } ?: currentMatch
     }
@@ -946,32 +967,6 @@ class SportsStreamRepository(
                 quality = "1080p HD"
             )
         )
-    }
-
-    /**
-     * Enriches a match on-demand with optional SofaScore TV broadcast channels and media highlights
-     * if a valid `sofascoreEventId` is configured on the match.
-     * Matches broadcast channels strictly against admin-approved channels in `_channels.value`.
-     */
-    suspend fun enrichMatchWithSofaScoreIfAvailable(matchId: String): LiveMatch? = withContext(Dispatchers.IO) {
-        val currentMatch = _matches.value.find { it.id == matchId } ?: return@withContext null
-        val sofaEventId = currentMatch.sofascoreEventId ?: return@withContext currentMatch
-        val enrichment = sofascoreService.fetchSupplementalMetadata(
-            sofascoreEventId = sofaEventId,
-            approvedChannels = _channels.value.filter { it.isEnabled }
-        ) ?: return@withContext currentMatch
-        if (enrichment.tvChannelNames.isEmpty() && enrichment.matchedApprovedStreams.isEmpty() && enrichment.approvedHighlightUrl == null) {
-            return@withContext currentMatch
-        }
-        val mergedStreams = (currentMatch.streams + enrichment.matchedApprovedStreams).distinctBy { it.url }
-        val updated = currentMatch.copy(
-            streams = mergedStreams,
-            broadcastChannels = enrichment.tvChannelNames,
-            approvedHighlightUrl = currentMatch.approvedHighlightUrl ?: enrichment.approvedHighlightUrl
-        )
-        cloudMatchOverrides[updated.id] = updated
-        rebuildCombinedMatches()
-        updated
     }
 
     // Match Operations (Admin stream & metadata overrides)
@@ -1814,35 +1809,7 @@ class SportsStreamRepository(
         }
     }
 
-    private fun defaultHighlights(): List<HighlightItem> {
-        val hls1 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        val hls2 = "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
-        val hls3 = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-
-        return listOf(
-            HighlightItem(
-                title = "Pakistan vs England - ODI Series Highlights",
-                tournament = "CRICKET • ODI SERIES",
-                duration = "12:45",
-                videoUrl = hls2,
-                sport = SportType.CRICKET
-            ),
-            HighlightItem(
-                title = "Afghanistan vs Zimbabwe - ODI Highlights",
-                tournament = "CRICKET • ODI SERIES",
-                duration = "10:15",
-                videoUrl = hls1,
-                sport = SportType.CRICKET
-            ),
-            HighlightItem(
-                title = "South Africa vs Australia - Test Match Recap",
-                tournament = "CRICKET • TEST SERIES",
-                duration = "09:30",
-                videoUrl = hls3,
-                sport = SportType.CRICKET
-            )
-        )
-    }
+    private fun defaultHighlights(): List<HighlightItem> = emptyList()
 
     // Real M3U8 & Stream Health Checker using OkHttp
     suspend fun checkM3U8Stream(url: String): M3U8CheckResult = withContext(Dispatchers.IO) {

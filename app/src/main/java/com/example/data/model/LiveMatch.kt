@@ -50,10 +50,16 @@ data class LiveMatch(
      */
     fun publicEnabledStreams(): List<StreamSource> {
         return streams
-            .filter { it.isEnabled && it.url.isNotBlank() }
+            .filter { s ->
+                val cleanUrl = s.url.substringBefore("|").trim()
+                s.isEnabled &&
+                    cleanUrl.isNotBlank() &&
+                    (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true)) &&
+                    !cleanUrl.endsWith(".txt", ignoreCase = true) &&
+                    !cleanUrl.contains("workers.dev/?q=", ignoreCase = true)
+            }
             .sortedWith(
                 compareBy<StreamSource> { it.isBackup }
-                    .thenByDescending { it.isDefault }
                     .thenBy { it.priorityOrder }
             )
     }

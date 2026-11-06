@@ -22,6 +22,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -787,21 +788,67 @@ class LivePlaylistMatcherService(
      */
     suspend fun resolvePlayzStreamsForPointer(
         pointerPath: String,
-        matchIdPrefix: String = "pz"
+        matchIdPrefix: String = "pz",
+        forceRefresh: Boolean = false
     ): List<StreamSource> = withContext(Dispatchers.IO) {
         val cleanPointer = pointerPath.trim().removePrefix("/")
         if (cleanPointer.isBlank()) return@withContext emptyList()
 
-        playzResolvedStreamsByPointer[cleanPointer]?.takeIf { it.isNotEmpty() }?.let {
-            return@withContext it
+        if (!forceRefresh) {
+            playzResolvedStreamsByPointer[cleanPointer]?.takeIf { it.isNotEmpty() }?.let {
+                return@withContext it
+            }
         }
 
         val dec = fetchPlayzEndpointDecrypted(cleanPointer) ?: return@withContext emptyList()
         val parsed = parsePlayzStreamItemsJson(dec, matchIdPrefix)
         if (parsed.isNotEmpty()) {
             playzResolvedStreamsByPointer[cleanPointer] = parsed
+        } else {
+            playzResolvedStreamsByPointer.remove(cleanPointer)
         }
         parsed
+    }
+
+    private fun resolvePlayzWorkerTokenUrl(workerApiUrl: String, linkKey: String = "playback_url"): String? {
+        val cleanApi = workerApiUrl.trim()
+        if (!cleanApi.startsWith("http://", true) && !cleanApi.startsWith("https://", true)) return null
+        return try {
+            val req = Request.Builder()
+                .url(cleanApi)
+                .get()
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36")
+                .build()
+            probeClient.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return null
+                val bodyStr = resp.body?.string()?.trim().orEmpty()
+                if (!bodyStr.startsWith("{")) return null
+                val json = JSONObject(bodyStr)
+                val rawPlayback = json.optString(linkKey.ifBlank { "playback_url" }, "")
+                    .ifBlank { json.optString("playback_url", "") }
+                    .ifBlank { json.optString("url", "") }
+                    .trim()
+                if (rawPlayback.isBlank()) return null
+                decodeWorkerPlaybackUrl(rawPlayback)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    internal fun decodeWorkerPlaybackUrl(rawPlayback: String): String {
+        val trimmed = rawPlayback.trim()
+        val urlPart = trimmed.substringBefore("|").trim()
+        val pipePart = if (trimmed.contains("|")) trimmed.substringAfter("|").trim() else ""
+        val decodedUrl = if (
+            urlPart.startsWith("http%3A", ignoreCase = true) ||
+            urlPart.startsWith("https%3A", ignoreCase = true)
+        ) {
+            runCatching { URLDecoder.decode(urlPart, "UTF-8").trim() }.getOrDefault(urlPart)
+        } else {
+            urlPart
+        }
+        return if (pipePart.isNotBlank()) "$decodedUrl|$pipePart" else decodedUrl
     }
 
     internal fun parsePlayzStreamItemsJson(
@@ -822,18 +869,57 @@ class LivePlaylistMatcherService(
                 }
                 if (!itemObj.optBoolean("visible", true)) continue
                 val name = itemObj.optString("name", "Server ${i + 1}").trim().ifBlank { "Server ${i + 1}" }
-                val rawLink = itemObj.optString("link", "").trim()
-                if (rawLink.isBlank() || (!rawLink.startsWith("http://", true) && !rawLink.startsWith("https://", true))) {
+                val rawLinkField = itemObj.optString("link", "").trim()
+
+                val tokenApiRaw = itemObj.opt("tokenApi")
+                val tokenApiObj = when (tokenApiRaw) {
+                    is JSONObject -> tokenApiRaw
+                    is String -> {
+                        val trimmedToken = tokenApiRaw.trim()
+                        if (trimmedToken.startsWith("{")) {
+                            runCatching { JSONObject(trimmedToken) }.getOrNull()
+                        } else {
+                            null
+                        }
+                    }
+                    else -> null
+                }
+
+                val tokenType = tokenApiObj?.optString("type", "")?.trim().orEmpty()
+                val tokenApiEndpoint = tokenApiObj?.optString("api", "")?.trim().orEmpty()
+                val tokenLinkKey = tokenApiObj?.optString("link_key", "playback_url")?.trim().ifNullOrBlank { "playback_url" }
+
+                val rawLink = when {
+                    tokenType.equals("sp", ignoreCase = true) && tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
+                        resolvePlayzWorkerTokenUrl(tokenApiEndpoint, tokenLinkKey)
+                            ?: if (rawLinkField.contains("workers.dev", ignoreCase = true)) {
+                                resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: ""
+                            } else {
+                                rawLinkField
+                            }
+                    }
+                    rawLinkField.contains("workers.dev/?q=", ignoreCase = true) -> {
+                        resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: ""
+                    }
+                    else -> rawLinkField
+                }.trim()
+
+                val baseLink = rawLink.substringBefore("|").trim()
+                if (baseLink.isBlank() ||
+                    (!baseLink.startsWith("http://", true) && !baseLink.startsWith("https://", true)) ||
+                    baseLink.endsWith(".txt", ignoreCase = true) ||
+                    baseLink.contains("workers.dev/?q=", ignoreCase = true)
+                ) {
                     continue
                 }
                 val apiField = itemObj.optString("api", "").trim()
-                val isDash = rawLink.substringBefore("|").contains(".mpd", ignoreCase = true)
+                val isDash = baseLink.contains(".mpd", ignoreCase = true)
                 val drmLicense = if (apiField.contains(":") || apiField.startsWith("http", true)) apiField else null
                 val quality = when {
                     name.contains("FHD", true) || name.contains("1080", true) || name.contains("UHD", true) -> "FHD"
                     name.contains("SD", true) || name.contains("LOW", true) -> "SD"
                     isDash -> "FHD"
-                    else -> "HD"
+                    else -> "FHD"
                 }
 
                 list.add(
@@ -851,17 +937,17 @@ class LivePlaylistMatcherService(
                     )
                 )
             }
-            // Prioritize direct .m3u8 HLS streams ahead of .mpd DRM streams so playback works on all devices & emulators
-            list.sortedWith(
-                compareBy<StreamSource> { !it.drmLicense.isNullOrBlank() || it.url.substringBefore("|").contains(".mpd", true) }
-                    .thenBy { it.priorityOrder }
-            ).mapIndexed { idx, s ->
+            // Preserve the exact stream priority order returned by the PlayZ server (`pro/<id>.txt`)
+            list.mapIndexed { idx, s ->
                 s.copy(isDefault = idx == 0, priorityOrder = idx + 1)
             }
         } catch (_: Exception) {
             emptyList()
         }
     }
+
+    private inline fun String?.ifNullOrBlank(defaultValue: () -> String): String =
+        if (this.isNullOrBlank()) defaultValue() else this
 
     /**
      * Fetches `events.txt`, `sports.txt`, and `highlights.txt` from PlayZ Server (`pabbdyzone.shop`)
@@ -880,29 +966,32 @@ class LivePlaylistMatcherService(
             emptyList()
         }
 
-        // Pre-resolve the live & upcoming matches' `pro/<id>.txt` streams concurrently so tapping any card has instant streams
-        val topMatchesToPreload = parsedMatches
+        // Pre-resolve LIVE and imminent UPCOMING matches' dedicated `pro/<id>.txt` streams in concurrent batches
+        val matchesToPreload = parsedMatches
             .filter { playzMatchPointerById.containsKey(it.id) }
             .sortedWith(
                 compareByDescending<LiveMatch> { it.status == MatchStatus.LIVE }
                     .thenBy { it.status != MatchStatus.UPCOMING }
-                    .thenBy { it.startTimeEpochMs }
+                    .thenBy { if (it.startTimeEpochMs > 0L) it.startTimeEpochMs else Long.MAX_VALUE }
             )
-            .take(25)
+            .take(18)
 
-        kotlinx.coroutines.supervisorScope {
-            val preloadJobs = topMatchesToPreload.map { m ->
-                async {
-                    runCatching {
-                        val ptr = playzMatchPointerById[m.id] ?: return@async
-                        val streams = resolvePlayzStreamsForPointer(ptr, m.id)
-                        if (streams.isNotEmpty()) {
-                            playzMatchesById[m.id] = m.copy(streams = streams)
+        for (batch in matchesToPreload.chunked(9)) {
+            kotlinx.coroutines.supervisorScope {
+                val preloadJobs = batch.map { m ->
+                    async {
+                        runCatching {
+                            val ptr = playzMatchPointerById[m.id] ?: return@async
+                            val streams = resolvePlayzStreamsForPointer(ptr, m.id)
+                            playzMatchesById[m.id] = m.copy(
+                                streams = streams,
+                                broadcastChannels = streams.map { it.name }.take(4)
+                            )
                         }
                     }
                 }
+                runCatching { preloadJobs.awaitAll() }
             }
-            runCatching { preloadJobs.awaitAll() }
         }
 
         val finalMatches = parsedMatches.map { m ->
@@ -926,6 +1015,8 @@ class LivePlaylistMatcherService(
             val arr = JSONArray(decryptedEventsJson)
             val result = mutableListOf<LiveMatch>()
             val seenEventKeys = HashSet<String>()
+            playzMatchesById.clear()
+            playzMatchPointerById.clear()
             val nowMs = System.currentTimeMillis()
             val utcFmt = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.US).apply {
                 timeZone = TimeZone.getTimeZone("GMT")
@@ -990,14 +1081,11 @@ class LivePlaylistMatcherService(
                     }
                 }
 
-                // Skip placeholder/empty non-match entries without real teams or links
-                if (teamA.equals("LaLiga links", true) || (linkNames.isEmpty() && linksPointer.isBlank())) {
-                    continue
-                }
-
-                // Deduplicate identical events in events.txt (e.g. repeated WBBL entries with same teams, date & pointer)
-                val dedupKey = "${linksPointer.lowercase(Locale.US)}|${teamA.lowercase(Locale.US)}|${teamB.lowercase(Locale.US)}|$dateStr|$timeStr"
-                if (!seenEventKeys.add(dedupKey)) {
+                // Skip placeholder/empty non-match entries (e.g. "LaLiga links", "Coppa ITALIA Links", "NPC Links", "NRL LINKS")
+                if (teamA.contains("link", ignoreCase = true) ||
+                    teamB.contains("link", ignoreCase = true) ||
+                    (linkNames.isEmpty() && linksPointer.isBlank())
+                ) {
                     continue
                 }
 
@@ -1050,31 +1138,30 @@ class LivePlaylistMatcherService(
                     else -> MatchStatus.UPCOMING
                 }
 
-                val matchId = "pz-$i-${(eventName + "_" + teamA + "_" + teamB + "_" + dateStr + "_" + linksPointer).hashCode().toUInt()}"
+                // Skip ancient finished events that ended more than 24 hours ago
+                if (status == MatchStatus.FINISHED && endEpochMs > 0L && (nowMs - endEpochMs) > 24 * 3600_000L) {
+                    continue
+                }
+
+                // Deduplicate identical events in events.txt (including duplicate fixtures with different pointer timestamps)
+                val dedupKey = "${categoryRaw.lowercase(Locale.US)}|${teamA.lowercase(Locale.US)}|${teamB.lowercase(Locale.US)}|$dateStr|$timeStr"
+                if (!seenEventKeys.add(dedupKey)) {
+                    continue
+                }
+
+                val matchId = "pz-${(eventName + "_" + teamA + "_" + teamB + "_" + dateStr + "_" + timeStr + "_" + linksPointer).lowercase(Locale.US).hashCode().toUInt()}"
                 if (linksPointer.isNotBlank()) {
                     playzMatchPointerById[matchId] = linksPointer
                 }
 
-                val effectiveLinkNames = if (linkNames.isNotEmpty()) {
-                    linkNames
-                } else if (linksPointer.isNotBlank()) {
-                    listOf("PLAYZ TV Live [FHD]")
+                // Never attach fake placeholder buttons or .txt URLs; only attach already-decrypted streams for this exact pointer
+                val cleanPointerKey = linksPointer.removePrefix("/")
+                val cachedResolved = if (cleanPointerKey.isNotBlank()) {
+                    playzResolvedStreamsByPointer[cleanPointerKey]
                 } else {
-                    emptyList()
+                    null
                 }
-
-                val cachedResolved = playzResolvedStreamsByPointer[linksPointer.removePrefix("/")]
-                val initialStreams = cachedResolved ?: effectiveLinkNames.mapIndexed { idx, btnName ->
-                    StreamSource(
-                        id = "$matchId-btn-${idx + 1}",
-                        name = btnName,
-                        quality = if (btnName.contains("FHD", true) || btnName.contains("HD", true)) "FHD" else "HD",
-                        url = if (linksPointer.isNotBlank()) "https://pabbdyzone.shop/${linksPointer.removePrefix("/")}" else "",
-                        isDefault = idx == 0,
-                        isEnabled = true,
-                        priorityOrder = idx + 1
-                    )
-                }
+                val initialStreams = cachedResolved ?: emptyList()
 
                 val formattedDhakaTime = if (startEpochMs > 0L) {
                     dhakaFmt.format(Date(startEpochMs))
@@ -1104,7 +1191,7 @@ class LivePlaylistMatcherService(
                     competitionId = eventName.lowercase(Locale.US),
                     startTimeEpochMs = startEpochMs,
                     isNationalTeam = isNatMatch,
-                    broadcastChannels = effectiveLinkNames.take(4)
+                    broadcastChannels = initialStreams.map { it.name }.take(4)
                 )
                 playzMatchesById[matchId] = match
                 result.add(match)
@@ -1180,6 +1267,9 @@ class LivePlaylistMatcherService(
     }
 
     fun getPlayzPointerForMatch(match: LiveMatch): String? {
+        if (match.provider == "PLAYZ") {
+            return playzMatchPointerById[match.id]
+        }
         playzMatchPointerById[match.id]?.let { return it }
         val found = findMatchingPlayzEvent(match)
         return found?.let { playzMatchPointerById[it.id] }
@@ -1192,11 +1282,14 @@ class LivePlaylistMatcherService(
         if (t1.length < 3 || t2.length < 3) return null
 
         return playzMatchesById.values.firstOrNull { candidate ->
-            val c1 = normalizeTeamToken(candidate.team1Name)
-            val c2 = normalizeTeamToken(candidate.team2Name)
-            val directMatch = (c1.contains(t1) || t1.contains(c1)) && (c2.contains(t2) || t2.contains(c2))
-            val swappedMatch = (c1.contains(t2) || t2.contains(c1)) && (c2.contains(t1) || t1.contains(c2))
-            directMatch || swappedMatch
+            candidate.sport == match.sport &&
+                run {
+                    val c1 = normalizeTeamToken(candidate.team1Name)
+                    val c2 = normalizeTeamToken(candidate.team2Name)
+                    val directMatch = c1 == t1 && c2 == t2
+                    val swappedMatch = c1 == t2 && c2 == t1
+                    directMatch || swappedMatch
+                }
         }
     }
 
@@ -1728,39 +1821,19 @@ class LivePlaylistMatcherService(
         val matchedEntries = LinkedHashMap<String, PlaylistEntry>()
         val broadcastBadgeNames = mutableListOf<String>()
 
-        // 0. If this is a direct PlayZ Server match, preserve its exact PlayZ stream buttons (`pro/<id>.txt` or resolved servers)
+        // 0. If this is a direct PlayZ Server match, strictly preserve ONLY its dedicated PlayZ server streams (`pro/<id>.txt`)
         if (match.provider == "PLAYZ") {
             val pointer = playzMatchPointerById[match.id]?.removePrefix("/")
             val resolvedPro = if (pointer != null) playzResolvedStreamsByPointer[pointer] else null
-            val primaryStreams = (resolvedPro?.takeIf { it.isNotEmpty() } ?: match.streams).toMutableList()
-
-            val t1Tok = normalizeTeamToken(match.team1Name)
-            val t2Tok = normalizeTeamToken(match.team2Name)
-            if (t1Tok.length >= 3 && t2Tok.length >= 3) {
-                for (evEntry in m3uEventEntries.values) {
-                    val entryNorm = normalizeTeamToken(evEntry.name)
-                    if (entryNorm.contains(t1Tok) && entryNorm.contains(t2Tok)) {
-                        if (primaryStreams.none { it.url == evEntry.url }) {
-                            primaryStreams.add(
-                                StreamSource(
-                                    id = "${match.id}-${evEntry.id}",
-                                    name = evEntry.name,
-                                    quality = evEntry.quality,
-                                    url = evEntry.url,
-                                    userAgent = evEntry.userAgent,
-                                    referer = evEntry.referer,
-                                    origin = evEntry.origin,
-                                    isDefault = primaryStreams.isEmpty(),
-                                    isEnabled = true,
-                                    priorityOrder = primaryStreams.size + 1,
-                                    isBackup = false
-                                )
-                            )
-                        }
-                    }
-                }
+            val realStreams = (resolvedPro ?: match.streams).filterNot {
+                val cleanUrl = it.url.substringBefore("|").trim()
+                cleanUrl.isBlank() ||
+                    cleanUrl.endsWith(".txt", ignoreCase = true)
             }
-            return match.copy(streams = primaryStreams)
+            return match.copy(
+                streams = realStreams,
+                broadcastChannels = realStreams.map { it.name }.take(4)
+            )
         }
 
         // 0a. Check if PlayZ Server (`events.txt` / `pro/<id>.txt`) has dedicated streams for this exact match

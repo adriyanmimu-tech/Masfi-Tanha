@@ -6,8 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -1049,6 +1051,7 @@ fun MultipleStreamsModalDialog(
     matchTitle: String? = null,
     matchTournament: String? = null,
     matchStatus: String? = null,
+    isLoadingStreams: Boolean = false,
     matchDetailState: com.example.data.crex.CrexMatchDetailState? = null,
     approvedHighlightUrl: String? = null,
     broadcastChannels: List<String> = emptyList(),
@@ -1057,14 +1060,20 @@ fun MultipleStreamsModalDialog(
     onStreamSelected: (StreamSource) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Only display enabled & authorized stream sources in priority order (never expose raw stream URLs)
+    // Only display enabled & authorized stream sources in priority order (never expose raw stream URLs or .txt pointers)
     val enabledStreams = remember(streams) {
         streams
-            .filter { it.isEnabled && it.url.isNotBlank() }
+            .filter { s ->
+                val cleanUrl = s.url.substringBefore("|").trim()
+                s.isEnabled &&
+                    cleanUrl.isNotBlank() &&
+                    (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true)) &&
+                    !cleanUrl.endsWith(".txt", ignoreCase = true) &&
+                    !cleanUrl.contains("workers.dev/?q=", ignoreCase = true)
+            }
             .sortedWith(
                 compareBy<StreamSource> { it.isBackup }
                     .thenBy { it.priorityOrder }
-                    .thenByDescending { it.isDefault }
             )
     }
 
@@ -1072,134 +1081,102 @@ fun MultipleStreamsModalDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .border(1.5.dp, CyanAccentVariant.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = NavyDark)
+                .padding(horizontal = 8.dp, vertical = 16.dp)
+                .border(1.2.dp, Color(0xFF0E7490), RoundedCornerShape(22.dp)),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF131A26))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(horizontal = 22.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Broadcast Waves Icon
+                // Top Broadcast Waves Icon in Circular Badge
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(58.dp)
                         .clip(CircleShape)
-                        .background(NavySurfaceVariant)
-                        .border(1.dp, CyanAccent.copy(alpha = 0.4f), CircleShape),
+                        .background(Color(0xFF162736))
+                        .border(1.dp, Color(0xFF1E4E68), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.Podcasts,
+                        Icons.Default.Sensors,
                         contentDescription = null,
-                        tint = CyanAccent,
-                        modifier = Modifier.size(28.dp)
+                        tint = Color(0xFF00BCD4),
+                        modifier = Modifier.size(30.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (matchTournament != null) {
-                    Text(
-                        text = matchTournament,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (matchTitle != null) {
-                    Text(
-                        text = matchTitle,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            fontSize = 17.sp
-                        ),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
-                if (broadcastChannels.isNotEmpty()) {
-                    Text(
-                        text = "TV Broadcast: ${broadcastChannels.joinToString(", ")}",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = CyanAccent,
-                            fontSize = 11.sp
-                        ),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-
-                // Multiple Streams Available Header
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = NavySurfaceVariant.copy(alpha = 0.7f)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (matchStatus == "LIVE") LiveRed else CyanAccent)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "MULTIPLE STREAMS AVAILABLE (${enabledStreams.size})",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = GoldYellow,
-                                fontSize = 11.sp,
-                                letterSpacing = 0.5.sp
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Select an authorized channel or streaming server to watch:",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
-                        fontSize = 12.sp
+                    text = "Multiple Streams Available",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 20.sp
                     ),
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                if (enabledStreams.isEmpty()) {
+                Text(
+                    text = "Choose your preferred stream",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color(0xFF8A99AD),
+                        fontSize = 14.sp
+                    ),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                if (isLoadingStreams && enabledStreams.isEmpty()) {
                     Surface(
-                        color = NavySurface,
-                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF1A2232),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color(0xFF00D8FF),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Loading match streams...",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8))
+                            )
+                        }
+                    }
+                } else if (enabledStreams.isEmpty()) {
+                    Surface(
+                        color = Color(0xFF1A2232),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
                             text = "No active stream sources are currently enabled for this match.",
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(18.dp)
                         )
                     }
                 } else {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 310.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         enabledStreams.forEach { stream ->
                             val isSelected = currentSelectedStream?.id == stream.id
@@ -1217,7 +1194,7 @@ fun MultipleStreamsModalDialog(
 
                 // Optional Approved Highlight button (only shown when an approved playable link exists)
                 if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = {
                             onWatchHighlight(approvedHighlightUrl)
@@ -1225,9 +1202,9 @@ fun MultipleStreamsModalDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(42.dp)
+                            .height(44.dp)
                             .testTag("watch_highlight_button"),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoldYellow.copy(alpha = 0.2f),
                             contentColor = GoldYellow
@@ -1248,33 +1225,38 @@ fun MultipleStreamsModalDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Cancel button
-                OutlinedButton(
-                    onClick = onDismiss,
+                // Cancel button matching reference APK
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = TextSecondary,
-                        containerColor = NavySurface
-                    ),
-                    border = null
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Color(0xFF28354A), RoundedCornerShape(16.dp))
+                        .clickable(onClick = onDismiss),
+                    color = Color(0xFF1A2232),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Cancel",
-                        modifier = Modifier.size(16.dp),
-                        tint = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Cancel",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium,
-                            color = TextSecondary
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Cancel",
+                            modifier = Modifier.size(18.dp),
+                            tint = Color(0xFF94A3B8)
                         )
-                    )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF94A3B8),
+                                fontSize = 16.sp
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -1287,23 +1269,20 @@ fun StreamItemButton(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) CyanAccent else NavyBorder
-    val containerColor = if (isSelected) NavySurfaceVariant else NavySurface
-
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, Color(0xFF28354A), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .testTag("stream_option_${stream.name.lowercase().replace(" ", "_")}"),
-        color = containerColor,
-        shape = RoundedCornerShape(12.dp)
+        color = Color(0xFF1A2232),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -1314,38 +1293,23 @@ fun StreamItemButton(
                 Icon(
                     Icons.Default.FormatListBulleted,
                     contentDescription = null,
-                    tint = if (isSelected) CyanAccent else TextSecondary,
-                    modifier = Modifier.size(18.dp)
+                    tint = Color(0xFF00D8FF),
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     text = stream.name,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                        color = if (isSelected) CyanAccent else TextPrimary,
-                        fontSize = 14.sp
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White,
+                        fontSize = 15.5.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (stream.isBackup) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = GoldYellow.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = "BACKUP",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = GoldYellow,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
-                            ),
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
-                    }
-                }
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Quality Badge (FHD, HD, SD)
             QualityBadge(quality = stream.quality)
@@ -1355,26 +1319,27 @@ fun StreamItemButton(
 
 @Composable
 fun QualityBadge(quality: String) {
-    val (bg, fg) = when (quality.uppercase()) {
-        "FHD", "1080P", "1080P FHD" -> Pair(QualityFHD.copy(alpha = 0.25f), QualityFHD)
-        "HD", "720P", "720P HD" -> Pair(QualityHD.copy(alpha = 0.25f), QualityHD)
-        else -> Pair(QualitySD.copy(alpha = 0.25f), QualitySD)
+    val label = when {
+        quality.uppercase().contains("FHD") || quality.contains("1080") -> "FHD"
+        quality.uppercase().contains("SD") || quality.contains("480") -> "SD"
+        else -> "FHD"
     }
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(bg)
-            .padding(horizontal = 7.dp, vertical = 2.dp),
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xFF11384A))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = quality.uppercase(),
+            text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = fg,
+                color = Color(0xFF00D8FF),
                 fontWeight = FontWeight.Bold,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
         )
     }
 }
+

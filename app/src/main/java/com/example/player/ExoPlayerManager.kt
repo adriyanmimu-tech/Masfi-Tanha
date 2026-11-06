@@ -208,25 +208,6 @@ class ExoPlayerManager(private val context: Context) {
         androidx.media3.exoplayer.drm.DrmSessionManager.DRM_UNSUPPORTED
     }
 
-    private fun isEmulatorDevice(): Boolean {
-        val fp = android.os.Build.FINGERPRINT.lowercase(Locale.US)
-        val model = android.os.Build.MODEL.lowercase(Locale.US)
-        val hw = android.os.Build.HARDWARE.lowercase(Locale.US)
-        val prod = android.os.Build.PRODUCT.lowercase(Locale.US)
-        return fp.startsWith("generic") || fp.startsWith("unknown") ||
-            model.contains("google_sdk") || model.contains("emulator") || model.contains("android sdk") ||
-            hw.contains("goldfish") || hw.contains("ranchu") ||
-            prod.contains("sdk") || prod.contains("emulator") || prod.contains("simulator")
-    }
-
-    private fun isDrmOrMpdStream(s: StreamSource): Boolean {
-        val clean = s.url.substringBefore("|").trim().lowercase(Locale.US)
-        return !s.drmLicense.isNullOrBlank() ||
-            s.url.contains("drmlicense=", ignoreCase = true) ||
-            clean.endsWith(".mpd") ||
-            clean.contains(".mpd?")
-    }
-
     private fun playStreamInternal(
         stream: StreamSource,
         forceLowQuality: Boolean,
@@ -242,22 +223,9 @@ class ExoPlayerManager(private val context: Context) {
         }
         currentForceLowQuality = forceLowQuality
 
-        // On emulators without hardware DRM HAL (DrmHalHidl / CryptoHalHidl),
-        // automatically prefer a direct .m3u8 stream over a DRM .mpd stream if available.
-        val effectiveStream = if (isEmulatorDevice() && isDrmOrMpdStream(stream)) {
-            fallbackCandidates.firstOrNull { candidate ->
-                candidate.url.isNotBlank() &&
-                    !isDrmOrMpdStream(candidate) &&
-                    !candidate.url.endsWith(".txt", ignoreCase = true) &&
-                    candidate.url !in failedStreamUrls
-            } ?: stream
-        } else {
-            stream
-        }
-
         try {
             val player = getPlayer()
-            _currentStream.value = effectiveStream
+            _currentStream.value = stream
             _errorMessage.value = null
             _isBuffering.value = true
 
@@ -275,7 +243,7 @@ class ExoPlayerManager(private val context: Context) {
                     .build()
             }
 
-            val mediaSource = createMediaSource(effectiveStream, forceLowQuality)
+            val mediaSource = createMediaSource(stream, forceLowQuality)
             player.setMediaSource(mediaSource)
             player.prepare()
             player.playWhenReady = true
@@ -393,32 +361,24 @@ class ExoPlayerManager(private val context: Context) {
         httpDataSourceFactory: DefaultHttpDataSource.Factory
     ): DrmSessionManagerProvider {
         val license = spec.drmLicense?.trim().orEmpty()
-        // Never invoke FrameworkMediaDrm on emulators (which lack DrmHalHidl / CryptoHalHidl)
-        // or when no DRM license is specified.
-        if (license.isBlank() || isEmulatorDevice()) {
+        // Local ClearKey ("kid:key" or JSON) is decrypted in-memory by ClearKeyDashDecryptor
+        // without touching native FrameworkMediaDrm / MediaCrypto (DrmHalHidl / CryptoHalHidl).
+        if (license.isBlank() || (!license.startsWith("http://", ignoreCase = true) && !license.startsWith("https://", ignoreCase = true))) {
             return noOpDrmProvider
         }
 
         return DrmSessionManagerProvider {
             try {
-                if (license.startsWith("http://", ignoreCase = true) || license.startsWith("https://", ignoreCase = true)) {
-                    val callback = HttpMediaDrmCallback(license, httpDataSourceFactory)
-                    val uuid = if (spec.drmScheme?.contains("clearkey", ignoreCase = true) == true) {
-                        C.CLEARKEY_UUID
-                    } else {
-                        C.WIDEVINE_UUID
-                    }
-                    DefaultDrmSessionManager.Builder()
-                        .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                        .setMultiSession(true)
-                        .build(callback)
+                val callback = HttpMediaDrmCallback(license, httpDataSourceFactory)
+                val uuid = if (spec.drmScheme?.contains("clearkey", ignoreCase = true) == true) {
+                    C.CLEARKEY_UUID
                 } else {
-                    val clearKeyBytes = toClearKeyJson(license) ?: license.toByteArray(Charsets.UTF_8)
-                    val callback = LocalMediaDrmCallback(clearKeyBytes)
-                    DefaultDrmSessionManager.Builder()
-                        .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
-                        .build(callback)
+                    C.WIDEVINE_UUID
                 }
+                DefaultDrmSessionManager.Builder()
+                    .setUuidAndExoMediaDrmProvider(uuid, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                    .setMultiSession(true)
+                    .build(callback)
             } catch (_: Throwable) {
                 androidx.media3.exoplayer.drm.DrmSessionManager.DRM_UNSUPPORTED
             }
@@ -449,7 +409,12 @@ class ExoPlayerManager(private val context: Context) {
             }
         }
 
-        val drmProvider = buildDrmSessionManagerProvider(spec, httpDataSourceFactory)
+        val clearKeyContext = ClearKeyDashDecryptor.parseClearKeyLicense(spec.drmLicense.orEmpty())
+        val drmProvider = if (clearKeyContext != null) {
+            noOpDrmProvider
+        } else {
+            buildDrmSessionManagerProvider(spec, httpDataSourceFactory)
+        }
         val lowerUrl = spec.cleanUrl.lowercase(Locale.US)
         val isDash = lowerUrl.contains(".mpd") ||
             stream.quality.contains("DASH", ignoreCase = true) ||
@@ -462,6 +427,14 @@ class ExoPlayerManager(private val context: Context) {
 
         return when {
             isDash -> {
+                val dashDataSourceFactory = if (clearKeyContext != null) {
+                    ClearKeyDashDecryptor.ClearKeyDecryptingDataSource.Factory(
+                        upstreamFactory = liveSafeDataSourceFactory,
+                        cryptoContext = clearKeyContext
+                    )
+                } else {
+                    liveSafeDataSourceFactory
+                }
                 val mediaItem = MediaItem.Builder()
                     .setUri(uri)
                     .setMimeType(MimeTypes.APPLICATION_MPD)
@@ -472,7 +445,7 @@ class ExoPlayerManager(private val context: Context) {
                     )
                     .build()
 
-                DashMediaSource.Factory(liveSafeDataSourceFactory)
+                DashMediaSource.Factory(dashDataSourceFactory)
                     .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(2))
                     .setDrmSessionManagerProvider(drmProvider)
                     .createMediaSource(mediaItem)
@@ -502,6 +475,16 @@ class ExoPlayerManager(private val context: Context) {
                     .createMediaSource(mediaItem)
             }
         }
+    }
+
+    fun stopAndClear() {
+        stopPositionTracking()
+        exoPlayer?.stop()
+        exoPlayer?.clearMediaItems()
+        _currentStream.value = null
+        _isPlaying.value = false
+        _isBuffering.value = false
+        _errorMessage.value = null
     }
 
     fun pause() {

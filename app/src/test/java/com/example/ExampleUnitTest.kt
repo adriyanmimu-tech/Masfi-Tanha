@@ -414,5 +414,37 @@ class ExampleUnitTest {
         val nedMatch = espnService.parseScoreboardJson("ned.1", sampleJson, referenceNowEpochMs = refNowMs).first()
         assertEquals("FOOTBALL | VRIENDENLOTERIJ EREDIVISIE", nedMatch.tournament)
     }
+
+    @Test
+    fun clearKeyDashDecryptor_parsesKeyAndStripsContentProtection() {
+        val ctx = com.example.player.ClearKeyDashDecryptor.parseClearKeyLicense(
+            "0b42be2664d7e811d04f3e504e0924c5:ae24090123b8c72ac5404dc152847cb8"
+        )
+        assertTrue(ctx != null)
+        assertEquals(16, ctx!!.defaultKeyBytes.size)
+
+        val sampleMpd = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <MPD>
+              <Period>
+                <AdaptationSet mimeType="video/mp4">
+                  <ContentProtection schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
+                  <ContentProtection schemeIdUri="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed">
+                    <cenc:pssh>AAAA</cenc:pssh>
+                  </ContentProtection>
+                  <Representation id="1" codecs="avc1.64001F"/>
+                </AdaptationSet>
+              </Period>
+            </MPD>
+        """.trimIndent().toByteArray(Charsets.UTF_8)
+
+        val cleanedMpd = String(
+            com.example.player.ClearKeyDashDecryptor.cleanMpdManifestBytes(sampleMpd),
+            Charsets.UTF_8
+        )
+        assertFalse(cleanedMpd.contains("ContentProtection", ignoreCase = true))
+        assertTrue(cleanedMpd.contains("Representation", ignoreCase = true))
+    }
 }
+
 

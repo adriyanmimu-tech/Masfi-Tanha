@@ -111,4 +111,53 @@ class ExampleRobolectricTest {
         val notices = repository.unmappedNotices.value
         assertTrue(notices.any { it.previousMatchId == "old-provider-id-999" })
     }
+
+    @Test
+    fun `playz match never exposes fake placeholder or unrelated m3u streams and preserves server stream order`() {
+        val matcher = com.example.data.playlist.LivePlaylistMatcherService()
+        val sampleEventsJson = """
+            [
+              {
+                "category": "Cricket",
+                "eventName": "ODI Series",
+                "teamAName": "India",
+                "teamBName": "South Africa",
+                "date": "06/11/2026",
+                "time": "14:00:00",
+                "links": "pro/761139.txt",
+                "link_names": ["Link 1 [FHD]"],
+                "visible": true
+              }
+            ]
+        """.trimIndent()
+
+        val parsed = matcher.parsePlayzEventsJson(sampleEventsJson)
+        assertEquals(1, parsed.size)
+        val match = parsed.first()
+        // Before pro/761139.txt is decrypted, streams must be empty — no fake .txt URL
+        assertTrue(match.streams.isEmpty())
+        assertTrue(match.publicEnabledStreams().isEmpty())
+
+        val enriched = matcher.enrichMatchWithAutoPlaylistStreams(match)
+        assertTrue(enriched.publicEnabledStreams().isEmpty())
+
+        // Verify parsePlayzStreamItemsJson preserves exact server order (including .mpd and .m3u8)
+        val sampleProJson = """
+            [
+              {"visible": true, "name": "WILLOW FHD", "link": "https://example.com/willow1.m3u8"},
+              {"visible": true, "name": "WILLOW ALT", "link": "https://example.com/willow2.m3u8"},
+              {"visible": true, "name": "SonyLiv (Asia)", "link": "https://example.com/sonyliv.m3u8"}
+            ]
+        """.trimIndent()
+        val resolvedStreams = matcher.parsePlayzStreamItemsJson(sampleProJson, match.id)
+        assertEquals(3, resolvedStreams.size)
+        assertEquals("WILLOW FHD", resolvedStreams[0].name)
+        assertEquals("WILLOW ALT", resolvedStreams[1].name)
+        assertEquals("SonyLiv (Asia)", resolvedStreams[2].name)
+
+        // Verify worker playback_url URL-decoding with pipe headers
+        val encodedWorkerUrl = "https%3A%2F%2Flive.kinescopecdn.net%2Fstream%2Fmaster.m3u8|referer=http://www.fawanews.sc/&origin=http://www.fawanews.sc"
+        val decoded = matcher.decodeWorkerPlaybackUrl(encodedWorkerUrl)
+        assertEquals("https://live.kinescopecdn.net/stream/master.m3u8|referer=http://www.fawanews.sc/&origin=http://www.fawanews.sc", decoded)
+    }
 }

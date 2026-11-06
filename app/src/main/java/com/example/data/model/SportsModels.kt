@@ -167,36 +167,3 @@ data class BulkM3uScanItem(
     val checkResult: M3U8CheckResult? = null
 )
 
-data class CricketScorecard(
-    val matchTitle: String,
-    val statusText: String,
-    val team1Name: String,
-    val team1Score: String,
-    val team2Name: String,
-    val team2Score: String,
-    val crr: String,
-    val rrr: String,
-    val needRunsText: String,
-    val batsmen: List<Pair<String, String>>, // Name to "Runs (Balls)"
-    val bowlers: List<Pair<String, String>>, // Name to "Wkts-Runs (Overs)"
-    val recentBalls: List<String>
-)
-
-data class FootballMatchEvent(
-    val minute: String,
-    val eventType: String, // "GOAL", "YELLOW_CARD", "RED_CARD", "SUB"
-    val player: String,
-    val team: String
-)
-
-data class FootballScoreDetail(
-    val matchTitle: String,
-    val tournament: String,
-    val team1: String,
-    val team2: String,
-    val score: String,
-    val time: String,
-    val possession: Pair<Int, Int>, // e.g. 58% vs 42%
-    val shots: Pair<Int, Int>,
-    val events: List<FootballMatchEvent>
-)

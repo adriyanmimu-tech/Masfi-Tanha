@@ -70,10 +70,20 @@ fun AdminPanelScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val credentialManager = remember(context) { CredentialManager.create(context) }
 
-    val authFlow = remember {
-        runCatching { Firebase.auth.authStateFlow() }.getOrElse { kotlinx.coroutines.flow.flowOf(null) }
+    val authFlow = remember(context) {
+        if (com.example.ui.auth.isFirebaseReady(context)) {
+            runCatching { Firebase.auth.authStateFlow() }.getOrElse { kotlinx.coroutines.flow.flowOf(null) }
+        } else {
+            kotlinx.coroutines.flow.flowOf(null)
+        }
     }
-    val initialUser = remember { runCatching { Firebase.auth.currentUser }.getOrNull() }
+    val initialUser = remember(context) {
+        if (com.example.ui.auth.isFirebaseReady(context)) {
+            runCatching { Firebase.auth.currentUser }.getOrNull()
+        } else {
+            null
+        }
+    }
     val currentUser by authFlow.collectAsState(initial = initialUser)
 
     val matches by repository.matches.collectAsState()
@@ -2489,9 +2499,9 @@ fun AddMatchModalDialog(
             } else {
                 listOf(
                     StreamSource(
-                        name = "T Sports HD",
+                        name = "Server 1",
                         quality = "1080p",
-                        url = "https://robitv.com/rn/http://45.117.61.162/01_Tsports_HD/tracks-v1a1/mono.m3u8",
+                        url = "",
                         isDefault = true
                     )
                 )

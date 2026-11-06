@@ -39,7 +39,6 @@ import androidx.credentials.CredentialManager
 import com.example.data.model.*
 import com.example.data.repository.SportsStreamRepository
 import com.example.player.ExoPlayerManager
-import com.example.ui.auth.AuthGateScreen
 import com.example.ui.auth.attemptAutoSignIn
 import com.example.ui.auth.authStateFlow
 import com.example.ui.auth.onGoogleSignInClicked
@@ -192,6 +191,7 @@ fun FootballLiveTvApp(
     var showStreamPickerModal by remember { mutableStateOf(false) }
     var streamPickerMatch by remember { mutableStateOf<LiveMatch?>(null) }
     var streamPickerChannel by remember { mutableStateOf<SportsChannel?>(null) }
+    var isResolvingMatchStreams by remember { mutableStateOf(false) }
     var showNetworkStreamDialog by remember { mutableStateOf(false) }
     var showM3UImportDialog by remember { mutableStateOf(false) }
     var showHighlightsDialog by remember { mutableStateOf(false) }
@@ -208,10 +208,14 @@ fun FootballLiveTvApp(
         streamPickerMatch = match
         streamPickerChannel = null
         showStreamPickerModal = true
+        isResolvingMatchStreams = match.publicEnabledStreams().isEmpty()
         coroutineScope.launch {
             val resolved = repository.resolveMatchStreamsOnDemand(match.id)
             if (resolved != null && streamPickerMatch?.id == match.id) {
                 streamPickerMatch = resolved
+            }
+            if (streamPickerMatch?.id == match.id) {
+                isResolvingMatchStreams = false
             }
         }
         if (match.sport == SportType.CRICKET) {
@@ -222,30 +226,30 @@ fun FootballLiveTvApp(
     }
 
     fun startPlaying(match: LiveMatch?, title: String?, streams: List<StreamSource>) {
-        val enabledStreams = streams.filter { it.isEnabled }
-        val nonPointerStreams = enabledStreams.filterNot {
-            it.url.contains("pro/") && it.url.endsWith(".txt", ignoreCase = true)
+        val nonPointerStreams = streams.filter { s ->
+            val cleanUrl = s.url.substringBefore("|").trim()
+            s.isEnabled &&
+                cleanUrl.isNotBlank() &&
+                !cleanUrl.endsWith(".txt", ignoreCase = true) &&
+                !cleanUrl.contains("workers.dev/?q=", ignoreCase = true)
         }
+        // Always stop & clear any previously playing stream before switching to a new match/channel
+        playerManager.stopAndClear()
         activeMatch = match
         activeChannelTitle = title
-        activeStreams = if (nonPointerStreams.isNotEmpty()) nonPointerStreams else enabledStreams
+        activeStreams = nonPointerStreams
         playerManager.setFallbackCandidates(activeStreams, config.forceLowQuality)
         if (match != null) {
             coroutineScope.launch {
                 val resolved = repository.resolveMatchStreamsOnDemand(match.id)
                 if (resolved != null && activeMatch?.id == match.id) {
                     activeMatch = resolved
-                    val resolvedList = resolved.publicEnabledStreams().filterNot {
-                        it.url.contains("pro/") && it.url.endsWith(".txt", ignoreCase = true)
-                    }
-                    if (resolvedList.isNotEmpty()) {
-                        val wasPointer = nonPointerStreams.isEmpty()
-                        activeStreams = resolvedList
-                        playerManager.setFallbackCandidates(resolvedList, config.forceLowQuality)
-                        if (wasPointer) {
-                            val def = resolvedList.find { it.isDefault } ?: resolvedList.first()
-                            playerManager.playStream(def, config.forceLowQuality)
-                        }
+                    val resolvedList = resolved.publicEnabledStreams()
+                    activeStreams = resolvedList
+                    playerManager.setFallbackCandidates(resolvedList, config.forceLowQuality)
+                    if (nonPointerStreams.isEmpty() && resolvedList.isNotEmpty()) {
+                        val def = resolvedList.find { it.isDefault } ?: resolvedList.first()
+                        playerManager.playStream(def, config.forceLowQuality)
                     }
                 }
             }
@@ -329,7 +333,7 @@ fun FootballLiveTvApp(
                 },
                 otherMatches = matches.filter { it.id != activeMatch?.id },
                 onSwitchMatch = { newMatch ->
-                    startPlaying(newMatch, null, newMatch.publicEnabledStreams())
+                    openMatchModal(newMatch)
                 },
                 onFavoriteToggle = { repository.toggleMatchFavorite(it) },
                 onEnterPiP = onEnterPiP
@@ -661,8 +665,12 @@ fun FootballLiveTvApp(
                                 },
                                 onFloatingPlayerClick = {
                                     if (currentStream == null && matches.isNotEmpty()) {
-                                        val firstLive = matches.firstOrNull { it.status == MatchStatus.LIVE } ?: matches.first()
-                                        startPlaying(firstLive, null, firstLive.publicEnabledStreams())
+                                        val firstLive = matches.firstOrNull {
+                                            it.status == MatchStatus.LIVE && it.publicEnabledStreams().isNotEmpty()
+                                        } ?: matches.firstOrNull { it.publicEnabledStreams().isNotEmpty() }
+                                        if (firstLive != null) {
+                                            startPlaying(firstLive, null, firstLive.publicEnabledStreams())
+                                        }
                                     }
                                     onEnterPiP()
                                 },
@@ -739,6 +747,7 @@ fun FootballLiveTvApp(
                 matchTitle = "${latestMatch.team1Name} vs ${latestMatch.team2Name}",
                 matchTournament = latestMatch.tournament,
                 matchStatus = latestMatch.status.name,
+                isLoadingStreams = isResolvingMatchStreams,
                 matchDetailState = detailState,
                 onRefreshDetail = {
                     coroutineScope.launch {
