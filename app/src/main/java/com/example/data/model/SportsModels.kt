@@ -34,11 +34,21 @@ data class HighlightItem(
     val id: String = UUID.randomUUID().toString(),
     val title: String,
     val tournament: String,
+    val categoryLabel: String = "Football",
+    val eventLogo: String = "",
+    val team1Name: String = "",
+    val team2Name: String = "",
+    val team1Logo: String = "",
+    val team2Logo: String = "",
+    val timeText: String = "",
+    val dateText: String = "",
+    val timestampEpochMs: Long = 0L,
     val duration: String,
     val thumbnailUrl: String = "",
     val videoUrl: String,
     val sport: SportType = SportType.FOOTBALL,
     val matchId: String? = null,
+    val isFavorite: Boolean = false,
     val isApproved: Boolean = true
 )
 

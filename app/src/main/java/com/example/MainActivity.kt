@@ -191,6 +191,8 @@ fun FootballLiveTvApp(
     var showStreamPickerModal by remember { mutableStateOf(false) }
     var streamPickerMatch by remember { mutableStateOf<LiveMatch?>(null) }
     var streamPickerChannel by remember { mutableStateOf<SportsChannel?>(null) }
+    var streamPickerHighlight by remember { mutableStateOf<HighlightItem?>(null) }
+    var resolvedHighlightStreams by remember { mutableStateOf<List<StreamSource>>(emptyList()) }
     var isResolvingMatchStreams by remember { mutableStateOf(false) }
     var showNetworkStreamDialog by remember { mutableStateOf(false) }
     var showM3UImportDialog by remember { mutableStateOf(false) }
@@ -207,6 +209,7 @@ fun FootballLiveTvApp(
     fun openMatchModal(match: LiveMatch) {
         streamPickerMatch = match
         streamPickerChannel = null
+        streamPickerHighlight = null
         showStreamPickerModal = true
         isResolvingMatchStreams = match.publicEnabledStreams().isEmpty()
         coroutineScope.launch {
@@ -221,6 +224,22 @@ fun FootballLiveTvApp(
         if (match.sport == SportType.CRICKET) {
             coroutineScope.launch {
                 repository.loadMatchDetailOnDemand(match.id, force = false)
+            }
+        }
+    }
+
+    fun openHighlightModal(highlight: HighlightItem) {
+        streamPickerHighlight = highlight
+        streamPickerMatch = null
+        streamPickerChannel = null
+        resolvedHighlightStreams = emptyList()
+        isResolvingMatchStreams = true
+        showStreamPickerModal = true
+        coroutineScope.launch {
+            val resolved = repository.resolveHighlightStreamsOnDemand(highlight)
+            if (streamPickerHighlight?.id == highlight.id) {
+                resolvedHighlightStreams = resolved
+                isResolvingMatchStreams = false
             }
         }
     }
@@ -356,9 +375,25 @@ fun FootballLiveTvApp(
             Scaffold(
                 topBar = {
                     Column {
+                        val topTitle = when (selectedTab) {
+                            NavTab.HIGHLIGHTS -> "Highlights"
+                            NavTab.CATEGORIES -> "Categories"
+                            NavTab.SPORTS -> "Sports"
+                            NavTab.FAVOURITES -> "Favourites"
+                            NavTab.MENU -> "Settings"
+                            else -> config.appTitle
+                        }
                         TopSportsBar(
-                            title = config.appTitle,
+                            title = topTitle,
                             onTelegramClick = { showTelegramDialog = true },
+                            onFavouritesClick = {
+                                selectedTab = if (selectedTab == NavTab.FAVOURITES) {
+                                    NavTab.LIVE_EVENTS
+                                } else {
+                                    NavTab.FAVOURITES
+                                }
+                            },
+                            isFavouritesActive = selectedTab == NavTab.FAVOURITES,
                             onRefreshClick = {
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar("Refreshing live & upcoming matches and active streams...")
@@ -383,8 +418,8 @@ fun FootballLiveTvApp(
                             }
                         )
 
-                        // Announcement Banner (kept on non-LIVE_EVENTS tabs so LIVE_EVENTS header matches screenshot)
-                        if (selectedTab != NavTab.LIVE_EVENTS && showAnnouncementBanner && config.announcement.isNotBlank()) {
+                        // Announcement Banner (kept on non-LIVE_EVENTS & non-HIGHLIGHTS tabs so headers match screenshots)
+                        if (selectedTab != NavTab.LIVE_EVENTS && selectedTab != NavTab.HIGHLIGHTS && showAnnouncementBanner && config.announcement.isNotBlank()) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -607,7 +642,7 @@ fun FootballLiveTvApp(
                                             selectedTab = NavTab.LIVE_EVENTS
                                         }
                                         nameUpper.contains("HIGHLIGHT") -> {
-                                            showHighlightsDialog = true
+                                            selectedTab = NavTab.HIGHLIGHTS
                                         }
                                         else -> {
                                             val matchedChannelCat = channels
@@ -618,6 +653,16 @@ fun FootballLiveTvApp(
                                             selectedTab = NavTab.SPORTS
                                         }
                                     }
+                                }
+                            )
+                        }
+
+                        NavTab.HIGHLIGHTS -> {
+                            HighlightsScreen(
+                                highlights = highlights,
+                                searchQuery = searchQuery,
+                                onHighlightClick = { highlight ->
+                                    openHighlightModal(highlight)
                                 }
                             )
                         }
@@ -635,6 +680,7 @@ fun FootballLiveTvApp(
                                     if (pubStreams.size > 1) {
                                         streamPickerChannel = channel
                                         streamPickerMatch = null
+                                        streamPickerHighlight = null
                                         showStreamPickerModal = true
                                     } else {
                                         startPlaying(null, channel.name, pubStreams)
@@ -654,7 +700,7 @@ fun FootballLiveTvApp(
                                 userEmail = currentUser?.email,
                                 onNetworkStreamClick = { showNetworkStreamDialog = true },
                                 onPlaylistsClick = { showM3UImportDialog = true },
-                                onHighlightsClick = { showHighlightsDialog = true },
+                                onHighlightsClick = { selectedTab = NavTab.HIGHLIGHTS },
                                 onCricketScoreClick = {
                                     scoresSportTitle = "Cricket"
                                     showScoresDialog = true
@@ -732,9 +778,10 @@ fun FootballLiveTvApp(
     }
 
     // Modal: Stream selection & on-demand CREX getSV3 match details
-    if (showStreamPickerModal && (streamPickerMatch != null || streamPickerChannel != null)) {
+    if (showStreamPickerModal && (streamPickerMatch != null || streamPickerChannel != null || streamPickerHighlight != null)) {
         val currentMatch = streamPickerMatch
         val currentChannel = streamPickerChannel
+        val currentHighlight = streamPickerHighlight
         if (currentMatch != null) {
             val latestMatch = matches.find { it.id == currentMatch.id } ?: currentMatch
             val pubStreams = latestMatch.publicEnabledStreams()
@@ -789,6 +836,28 @@ fun FootballLiveTvApp(
                 onDismiss = {
                     showStreamPickerModal = false
                     streamPickerChannel = null
+                }
+            )
+        } else if (currentHighlight != null) {
+            MultipleStreamsModalDialog(
+                streams = resolvedHighlightStreams,
+                currentSelectedStream = resolvedHighlightStreams.firstOrNull(),
+                matchTitle = currentHighlight.title,
+                matchTournament = currentHighlight.tournament,
+                matchStatus = "HIGHLIGHTS",
+                isLoadingStreams = isResolvingMatchStreams,
+                onStreamSelected = { selected ->
+                    showStreamPickerModal = false
+                    streamPickerHighlight = null
+                    startPlaying(
+                        null,
+                        currentHighlight.title,
+                        listOf(selected) + resolvedHighlightStreams.filter { it.id != selected.id }
+                    )
+                },
+                onDismiss = {
+                    showStreamPickerModal = false
+                    streamPickerHighlight = null
                 }
             )
         }

@@ -59,6 +59,8 @@ import com.example.R
 fun TopSportsBar(
     title: String = "PLAYLIVE",
     onTelegramClick: () -> Unit,
+    onFavouritesClick: () -> Unit = {},
+    isFavouritesActive: Boolean = false,
     onRefreshClick: () -> Unit,
     onSearchClick: () -> Unit,
     searchQuery: String = "",
@@ -121,61 +123,38 @@ fun TopSportsBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_app_logo),
-                        contentDescription = "PLAYLIVE Logo",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                Text(
+                    text = title.ifBlank { "PLAYLIVE" },
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 23.sp,
+                        letterSpacing = 0.2.sp
                     )
-                    Text(
-                        text = title.ifBlank { "PLAYLIVE" },
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                    )
-                }
+                )
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    // Telegram community circle button (cyan circle with purple/magenta border ring matching screenshot)
+                    // Favourites Star icon button (matching reference header screenshot)
                     Box(
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF28A8E9))
-                            .border(
-                                width = 1.8.dp,
-                                brush = Brush.linearGradient(
-                                    colors = listOf(Color(0xFFA855F7), Color(0xFFEC4899))
-                                ),
-                                shape = CircleShape
-                            )
-                            .clickable(onClick = onTelegramClick)
-                            .testTag("telegram_button"),
+                            .clickable(onClick = onFavouritesClick)
+                            .testTag("favourites_header_button"),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Send,
-                            contentDescription = "Telegram",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(15.dp)
-                                .offset(x = (-1).dp, y = 0.dp)
+                            Icons.Default.Star,
+                            contentDescription = "Favourites",
+                            tint = if (isFavouritesActive) Color(0xFFF5B301) else Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -192,7 +171,7 @@ fun TopSportsBar(
                             Icons.Default.Refresh,
                             contentDescription = "Refresh",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -209,7 +188,7 @@ fun TopSportsBar(
                             Icons.Default.Search,
                             contentDescription = "Search",
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -218,12 +197,13 @@ fun TopSportsBar(
     }
 }
 
-enum class NavTab(val label: String, val icon: ImageVector) {
-    FAVOURITES("Favourites", Icons.Default.Star),
-    SPORTS("Sports", Icons.Default.SportsSoccer),
-    LIVE_EVENTS("Live Events", Icons.Default.Podcasts),
-    CATEGORIES("Categories", Icons.Default.Tv),
-    MENU("Menu", Icons.Default.FormatListBulleted)
+enum class NavTab(val label: String, val icon: ImageVector, val showInBottomBar: Boolean = true) {
+    LIVE_EVENTS("Live Events", Icons.Default.Podcasts, true),
+    CATEGORIES("Categories", Icons.Default.Tv, true),
+    SPORTS("Sports", Icons.Default.SportsSoccer, true),
+    HIGHLIGHTS("Highlights", Icons.Default.VideoLibrary, true),
+    MENU("Settings", Icons.Default.Settings, true),
+    FAVOURITES("Favourites", Icons.Default.Star, false)
 }
 
 @Composable
@@ -231,6 +211,7 @@ fun BottomSportsNavBar(
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit
 ) {
+    val visibleTabs = remember { NavTab.values().filter { it.showInBottomBar } }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,12 +219,12 @@ fun BottomSportsNavBar(
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Surface(
-            color = Color(0xFF1A2434),
+            color = Color(0xFF151E2E),
             shape = RoundedCornerShape(38.dp),
             tonalElevation = 10.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp)
+                .height(72.dp)
                 .border(
                     width = 1.dp,
                     color = Color(0xFF28374E),
@@ -257,10 +238,9 @@ fun BottomSportsNavBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                NavTab.values().forEach { tab ->
+                visibleTabs.forEach { tab ->
                     val isSelected = tab == selectedTab
-                    val isCenterLiveTab = tab == NavTab.LIVE_EVENTS
-                    val activeCyan = Color(0xFF00D1C1)
+                    val activeBlue = Color(0xFF3B82F6)
                     val inactiveGrey = Color(0xFF94A3B8)
 
                     Box(
@@ -268,9 +248,9 @@ fun BottomSportsNavBar(
                             .weight(1f)
                             .fillMaxHeight()
                             .padding(vertical = 4.dp, horizontal = 2.dp)
-                            .clip(RoundedCornerShape(32.dp))
+                            .clip(RoundedCornerShape(34.dp))
                             .background(
-                                if (isSelected) Color(0xFF233246)
+                                if (isSelected) Color(0xFF1E2D47)
                                 else Color.Transparent
                             )
                             .clickable { onTabSelected(tab) }
@@ -282,17 +262,17 @@ fun BottomSportsNavBar(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = if (isCenterLiveTab) Icons.Default.Podcasts else tab.icon,
+                                imageVector = tab.icon,
                                 contentDescription = tab.label,
-                                tint = if (isSelected) activeCyan else inactiveGrey,
-                                modifier = Modifier.size(if (isCenterLiveTab) 26.dp else 23.dp)
+                                tint = if (isSelected) activeBlue else inactiveGrey,
+                                modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = tab.label,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) activeCyan else inactiveGrey,
+                                    color = if (isSelected) activeBlue else inactiveGrey,
                                     fontSize = 11.sp
                                 ),
                                 maxLines = 1

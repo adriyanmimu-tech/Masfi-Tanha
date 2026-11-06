@@ -744,7 +744,12 @@ class LivePlaylistMatcherService(
     }
 
     private fun fetchPlayzEndpointDecrypted(relativePath: String): String? {
-        val cleanPath = relativePath.trim().removePrefix("/")
+        val cleanPath = relativePath.trim()
+            .removePrefix("https://pabbdyzone.shop/")
+            .removePrefix("http://pabbdyzone.shop/")
+            .removePrefix("https://tourniquest.site/")
+            .removePrefix("http://tourniquest.site/")
+            .removePrefix("/")
         if (cleanPath.isBlank()) return null
 
         val candidateBases = buildList {
@@ -822,14 +827,32 @@ class LivePlaylistMatcherService(
             probeClient.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) return null
                 val bodyStr = resp.body?.string()?.trim().orEmpty()
-                if (!bodyStr.startsWith("{")) return null
-                val json = JSONObject(bodyStr)
-                val rawPlayback = json.optString(linkKey.ifBlank { "playback_url" }, "")
-                    .ifBlank { json.optString("playback_url", "") }
-                    .ifBlank { json.optString("url", "") }
-                    .trim()
-                if (rawPlayback.isBlank()) return null
-                decodeWorkerPlaybackUrl(rawPlayback)
+                if (bodyStr.startsWith("{")) {
+                    val json = JSONObject(bodyStr)
+                    val rawPlayback = json.optString(linkKey.ifBlank { "playback_url" }, "")
+                        .ifBlank { json.optString("playback_url", "") }
+                        .ifBlank { json.optString("url", "") }
+                        .trim()
+                    if (rawPlayback.isBlank()) return null
+                    decodeWorkerPlaybackUrl(rawPlayback)
+                } else {
+                    // Support HTML embed players (e.g. soccerfull.net/play/... containing var m3u8Url = "...")
+                    val extractedM3u8 = Regex("""var\s+m3u8Url\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                        .find(bodyStr)?.groupValues?.getOrNull(1)
+                        ?: Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)""", RegexOption.IGNORE_CASE)
+                            .find(bodyStr)?.groupValues?.getOrNull(1)
+                    if (!extractedM3u8.isNullOrBlank()) {
+                        val originMatch = Regex("""^(https?://[^/]+)""", RegexOption.IGNORE_CASE)
+                            .find(cleanApi)?.groupValues?.getOrNull(1)
+                        if (!originMatch.isNullOrBlank() && !extractedM3u8.contains("|")) {
+                            "$extractedM3u8|referer=$originMatch/&origin=$originMatch"
+                        } else {
+                            extractedM3u8
+                        }
+                    } else {
+                        null
+                    }
+                }
             }
         } catch (_: Exception) {
             null
@@ -890,7 +913,8 @@ class LivePlaylistMatcherService(
                 val tokenLinkKey = tokenApiObj?.optString("link_key", "playback_url")?.trim().ifNullOrBlank { "playback_url" }
 
                 val rawLink = when {
-                    tokenType.equals("sp", ignoreCase = true) && tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
+                    (tokenType.equals("sp", ignoreCase = true) || tokenType.equals("embed", ignoreCase = true) || rawLinkField.isBlank()) &&
+                        tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
                         resolvePlayzWorkerTokenUrl(tokenApiEndpoint, tokenLinkKey)
                             ?: if (rawLinkField.contains("workers.dev", ignoreCase = true)) {
                                 resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: ""
@@ -1205,31 +1229,73 @@ class LivePlaylistMatcherService(
     private fun parsePlayzHighlightsJson(decryptedHighlightsJson: String): List<HighlightItem> {
         return try {
             val arr = JSONArray(decryptedHighlightsJson)
-            val list = mutableListOf<HighlightItem>()
-            for (i in 0 until arr.length().coerceAtMost(35)) {
+            val indexedItems = mutableListOf<Pair<Int, HighlightItem>>()
+            val utcFmt = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("GMT")
+            }
+            val dhakaTimeFmt = SimpleDateFormat("hh:mm a", Locale.US).apply {
+                timeZone = DHAKA_TZ
+            }
+            val dhakaDateFmt = SimpleDateFormat("dd/MM/yyyy", Locale.US).apply {
+                timeZone = DHAKA_TZ
+            }
+
+            for (i in 0 until arr.length()) {
                 val wrapper = arr.optJSONObject(i) ?: continue
                 val innerStr = wrapper.optString("highlight", "")
                 val hl = if (innerStr.isNotBlank()) JSONObject(innerStr) else wrapper
                 if (!hl.optBoolean("visible", true)) continue
-                val cat = hl.optString("category", "Football")
-                val eventName = hl.optString("eventName", cat).trim()
+                val cat = hl.optString("category", "Football").trim().ifBlank { "Football" }
+                val eventName = hl.optString("eventName", cat).trim().ifBlank { cat }
                 val teamA = hl.optString("teamAName", "").trim()
                 val teamB = hl.optString("teamBName", "").trim()
+                if (teamA.isBlank() && teamB.isBlank()) continue
+
                 val goalsA = hl.optString("teamAGoals", "")
                 val goalsB = hl.optString("teamBGoals", "")
-                val logo = hl.optString("eventLogo", "").replace("http://", "https://")
+                val logo = hl.optString("eventLogo", "").trim()
+                    .takeUnless { it.equals("null", true) }.orEmpty()
+                    .replace("http://", "https://")
+                val teamALogo = hl.optString("teamAFlag", "").trim()
+                    .takeUnless { it.equals("null", true) }.orEmpty()
+                    .replace("http://", "https://")
+                    .ifBlank { logo }
+                val teamBLogo = hl.optString("teamBFlag", "").trim()
+                    .takeUnless { it.equals("null", true) }.orEmpty()
+                    .replace("http://", "https://")
+                    .ifBlank { logo }
+
+                val rawDate = hl.optString("date", "").trim()
+                val rawTime = hl.optString("time", "00:00:00").trim().ifBlank { "00:00:00" }
+                val epochMs = if (rawDate.isNotBlank()) {
+                    runCatching { utcFmt.parse("$rawDate $rawTime")?.time ?: 0L }.getOrDefault(0L)
+                } else {
+                    0L
+                }
+                val timeFormatted = if (epochMs > 0L) dhakaTimeFmt.format(Date(epochMs)) else rawTime.take(5)
+                val dateFormatted = if (epochMs > 0L) dhakaDateFmt.format(Date(epochMs)) else rawDate
+
                 val linksPtr = hl.optString("links", "").trim()
                 val title = if (goalsA.isNotBlank() && goalsB.isNotBlank()) {
                     "$teamA $goalsA - $goalsB $teamB"
                 } else {
                     "$teamA vs $teamB"
                 }
-                list.add(
-                    HighlightItem(
+                indexedItems.add(
+                    i to HighlightItem(
                         id = "pz-hl-$i",
                         title = title,
                         tournament = eventName,
-                        duration = hl.optString("date", "Highlights"),
+                        categoryLabel = cat,
+                        eventLogo = logo,
+                        team1Name = teamA,
+                        team2Name = teamB,
+                        team1Logo = teamALogo,
+                        team2Logo = teamBLogo,
+                        timeText = timeFormatted,
+                        dateText = dateFormatted,
+                        timestampEpochMs = epochMs,
+                        duration = if (dateFormatted.isNotBlank()) "$timeFormatted $dateFormatted" else "Highlights",
                         thumbnailUrl = logo,
                         videoUrl = if (linksPtr.startsWith("http")) linksPtr else "https://pabbdyzone.shop/${linksPtr.removePrefix("/")}",
                         sport = mapCategoryToSportType(cat, eventName),
@@ -1237,7 +1303,12 @@ class LivePlaylistMatcherService(
                     )
                 )
             }
-            list
+            indexedItems
+                .sortedWith(
+                    compareByDescending<Pair<Int, HighlightItem>> { it.second.timestampEpochMs }
+                        .thenBy { it.first }
+                )
+                .map { it.second }
         } catch (_: Exception) {
             emptyList()
         }

@@ -3,514 +3,1581 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sports Live — Web Admin Control Panel</title>
+  <title>PLAYLIVE — Admin Panel & Live Control</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     :root {
       --bg: #0b111e;
-      --card: #131b2a;
-      --border: #243247;
-      --cyan: #00d1c1;
-      --gold: #f5b301;
+      --surface: #151f30;
+      --surface-alt: #1a2639;
+      --border: #2a3b54;
+      --blue: #3b82f6;
+      --blue-glow: #2563eb;
+      --cyan: #14b8a6;
       --red: #e53935;
+      --gold: #f5b301;
       --green: #10b981;
       --text: #ffffff;
       --muted: #94a3b8;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1020px; margin: 0 auto; }
-    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-    h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
-    .badge { background: var(--cyan); color: #000; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-    .tab-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 99px; cursor: pointer; font-weight: 600; }
-    .tab-btn.active { border-color: var(--cyan); background: #152336; color: var(--cyan); }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
-    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-    input, select, textarea { width: 100%; background: #0b111e; border: 1px solid var(--border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
-    button.primary { background: var(--cyan); color: #000; border: none; padding: 11px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; }
-    button.secondary { background: #1e293b; color: var(--cyan); border: 1px solid var(--cyan); padding: 9px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-    button.danger { background: var(--red); color: #fff; border: none; padding: 7px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 10px; gap: 10px; flex-wrap: wrap; }
-    .status-bar { font-size: 13px; color: var(--green); margin-bottom: 14px; font-weight: 600; }
-    .league-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 10px; max-height: 280px; overflow-y: auto; padding: 8px; background: #0b111e; border-radius: 10px; border: 1px solid var(--border); }
-    .league-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 6px 8px; background: var(--card); border-radius: 6px; }
-    .league-item input { width: auto; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 110px;
+    }
+    .app-shell {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 12px;
+    }
+
+    /* Top App Bar matching PLAYLIVE / Highlights Screenshot */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 17, 30, 0.96);
+      backdrop-filter: blur(12px);
+      padding: 14px 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(42, 59, 84, 0.45);
+    }
+    .top-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #fff;
+    }
+    .admin-pill {
+      background: linear-gradient(135deg, #2563eb, #14b8a6);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.08); }
+    .auth-btn {
+      background: #1e2d47;
+      color: #fff;
+      border: 1px solid var(--blue);
+      padding: 7px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .auth-btn.connected {
+      border-color: var(--green);
+      color: #34d399;
+    }
+
+    /* Search Drawer */
+    .search-bar-wrap {
+      display: none;
+      padding: 8px 4px;
+    }
+    .search-bar-wrap.open { display: block; }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--blue);
+      color: #fff;
+      padding: 11px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    /* Cloud & Server Status Strip */
+    .status-strip {
+      margin: 8px 4px 4px;
+      padding: 8px 14px;
+      background: #111a29;
+      border: 1px solid #1f2e46;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 6px;
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    /* Circular Sport Filter Row matching Screenshot */
+    .sport-circles-row {
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 12px 4px 8px;
+      scrollbar-width: none;
+    }
+    .sport-circles-row::-webkit-scrollbar { display: none; }
+    .sport-circle-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      min-width: 68px;
+    }
+    .sport-circle-box {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #151e2e;
+      border: 1.4px solid #223044;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s;
+    }
+    .sport-circle-item.active .sport-circle-box {
+      border: 2.2px solid var(--blue);
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.38);
+    }
+    .sport-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: var(--red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 5px;
+      border-radius: 99px;
+      border: 1.5px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sport-circle-label {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .sport-circle-item.active .sport-circle-label {
+      font-weight: 700;
+      color: var(--blue);
+    }
+
+    /* Status Filter Pills Row (All, Live, Upcoming, Finished) */
+    .status-pills-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 4px 12px;
+      scrollbar-width: none;
+    }
+    .status-pill {
+      background: #151e2e;
+      color: #fff;
+      border: 1.3px solid #25354d;
+      padding: 8px 18px;
+      border-radius: 99px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-pill.active {
+      border-color: var(--cyan);
+      background: #122536;
+      font-weight: 700;
+    }
+
+    /* Admin Action Bar inside each tab */
+    .admin-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 4px 4px 12px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+    .btn-secondary {
+      background: #1a2639;
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-danger {
+      background: rgba(229, 57, 53, 0.16);
+      color: #ff6b6b;
+      border: 1px solid rgba(229, 57, 53, 0.4);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-edit {
+      background: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Match & Highlight Card matching Screenshot 100% */
+    .cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      padding: 0 2px;
+    }
+    .match-card {
+      background: var(--surface);
+      border: 1.2px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 15px;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s;
+    }
+    .match-card:hover {
+      border-color: var(--blue);
+      transform: translateY(-1px);
+    }
+    .card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .card-league-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+    .card-league-logo {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .card-league-title {
+      font-size: 14.5px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-datetime {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      font-size: 13.5px;
+    }
+    .card-time-blue {
+      color: var(--blue);
+      font-weight: 600;
+    }
+    .card-date-white {
+      color: #fff;
+      font-weight: 500;
+    }
+    .card-teams-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .team-side {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .team-side.right {
+      justify-content: flex-end;
+      text-align: right;
+    }
+    .team-logo {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+    }
+    .team-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .center-status {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 64px;
+      padding: 0 6px;
+    }
+    .vs-text {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .live-badge-center {
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: #ef4444;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .card-admin-footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(42, 59, 84, 0.7);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Categories & Channels Grid */
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .channel-card {
+      background: var(--surface);
+      border: 1.2px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .channel-card:hover { border-color: var(--blue); }
+
+    /* Editor Card / Form */
+    .editor-panel {
+      display: none;
+      background: #111a2b;
+      border: 1.5px solid var(--blue);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .editor-panel.open { display: block; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      background: #0b111e;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13.5px;
+    }
+
+    /* Multiple Streams Available Modal (Exact Match to Screenshot) */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(4, 8, 16, 0.78);
+      backdrop-filter: blur(5px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .streams-modal {
+      width: 100%;
+      max-width: 420px;
+      background: #141c27;
+      border: 1.3px solid rgba(20, 184, 166, 0.55);
+      border-radius: 26px;
+      padding: 24px 20px 20px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.75);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-signal-circle {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: #122b36;
+      border: 1.5px solid rgba(20, 184, 166, 0.55);
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #14b8a6;
+      font-size: 28px;
+    }
+    .modal-heading {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 14px;
+      color: #9ba8b8;
+      margin-bottom: 18px;
+    }
+    .stream-row-btn {
+      width: 100%;
+      background: #1b2432;
+      border: 1px solid #2b384b;
+      border-radius: 15px;
+      padding: 14px 16px;
+      margin-bottom: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      color: #fff;
+      transition: border-color 0.15s;
+    }
+    .stream-row-btn:hover {
+      border-color: #14b8a6;
+    }
+    .stream-row-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .fhd-badge {
+      background: #1b3a5c;
+      color: #38bdf8;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 11px;
+      border-radius: 99px;
+    }
+    .cancel-modal-btn {
+      width: 100%;
+      background: #1b2432;
+      border: 1px solid #2b384b;
+      border-radius: 15px;
+      padding: 13px;
+      margin-top: 6px;
+      color: #e2e8f0;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .video-preview-box {
+      display: none;
+      margin: 12px 0;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .video-preview-box.open { display: block; }
+    .video-preview-box video {
+      width: 100%;
+      max-height: 220px;
+      background: #000;
+    }
+
+    /* Floating Bottom Rounded Pill Navigation Bar matching Screenshot */
+    .bottom-nav-wrap {
+      position: fixed;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      padding: 0 12px;
+      pointer-events: none;
+    }
+    .bottom-nav {
+      pointer-events: auto;
+      width: 100%;
+      max-width: 620px;
+      height: 72px;
+      background: #151e2e;
+      border: 1px solid #28374e;
+      border-radius: 38px;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    }
+    .nav-tab {
+      flex: 1;
+      height: 62px;
+      border-radius: 34px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      transition: all 0.16s;
+    }
+    .nav-tab svg {
+      width: 23px;
+      height: 23px;
+      fill: currentColor;
+    }
+    .nav-tab span {
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .nav-tab.active {
+      background: #1e2d47;
+      color: var(--blue);
+    }
+    .nav-tab.active span {
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Sports Live <span class="badge">WEBSITE ADMIN PANEL</span></h1>
-    <div id="authArea">
-      <button class="primary" id="loginBtn">Sign in with Google (Admin)</button>
+  <div class="app-shell">
+    <!-- TOP BAR -->
+    <header class="top-bar">
+      <div class="top-title-wrap">
+        <span class="top-title" id="screenTitle">Live Events</span>
+        <span class="admin-pill">ADMIN PANEL</span>
+      </div>
+      <div class="top-actions">
+        <button class="auth-btn" id="loginBtn" title="Sign in with Google for Cloud Sync">Sign in (Admin)</button>
+        <!-- Star (Favourites) -->
+        <button class="icon-btn" onclick="filterFavouritesOnly()" title="Favourites">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        </button>
+        <!-- Refresh -->
+        <button class="icon-btn" onclick="syncPlayzLiveFeed()" title="Refresh Live Server">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        </button>
+        <!-- Search -->
+        <button class="icon-btn" onclick="toggleSearch()" title="Search">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- SEARCH BAR -->
+    <div class="search-bar-wrap" id="searchWrap">
+      <input class="search-input" id="searchInput" placeholder="Search matches, teams, tournaments, highlights, channels..." oninput="renderActiveScreen()" />
     </div>
-  </header>
 
-  <div class="status-bar" id="statusBar">Connecting to Firebase Cloud Server...</div>
-
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('providers')">ESPN & CREX Provider Sync</button>
-    <button class="tab-btn" onclick="switchTab('matches')">Live & Upcoming Matches</button>
-    <button class="tab-btn" onclick="switchTab('channels')">Channels & Streams</button>
-    <button class="tab-btn" onclick="switchTab('settings')">App Broadcast Settings</button>
-  </div>
-
-  <!-- TAB 0: PROVIDERS (ESPN FOOTBALL & CREX CRICKET) -->
-  <div id="tab-providers">
-    <div class="card">
-      <h3>Provider Sync & Competition Control (ESPN Soccer & CREX International Cricket)</h3>
-      <p style="font-size:12px;color:var(--muted);margin-top:4px;">
-        Asia/Dhaka টাইমজোন অনুযায়ী গতকাল, আজ এবং আগামীকালের সিনিয়র আন্তর্জাতিক ও প্রফেশনাল ক্লাব ম্যাচ নিয়ন্ত্রণ করুন।
-      </p>
-      <div class="form-grid">
-        <div>
-          <label>Football Sync (ESPN Scoreboard)</label>
-          <select id="p_football_sync">
-            <option value="true">Enabled (সক্রিয়)</option>
-            <option value="false">Disabled (বন্ধ)</option>
-          </select>
-        </div>
-        <div>
-          <label>Cricket Sync (CREX International)</label>
-          <select id="p_cricket_sync">
-            <option value="true">Enabled (সক্রিয়)</option>
-            <option value="false">Disabled (বন্ধ)</option>
-          </select>
-        </div>
-        <div>
-          <label>Live Auto-Refresh Interval</label>
-          <select id="p_refresh_sec">
-            <option value="15">15 Seconds</option>
-            <option value="25">25 Seconds</option>
-            <option value="30" selected>30 Seconds</option>
-            <option value="60">60 Seconds</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="margin-top:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <label style="margin:0;color:var(--cyan);font-weight:700;">Enabled ESPN Senior Football Competitions</label>
-          <div style="display:flex;gap:8px;">
-            <button class="secondary" type="button" onclick="toggleAllLeagues(true)">Select All</button>
-            <button class="secondary" type="button" onclick="toggleCore9Leagues()">Core 9 Only</button>
-          </div>
-        </div>
-        <div class="league-grid" id="leagueCheckboxes"></div>
-      </div>
-
-      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="primary" onclick="saveSettings()">Save Provider & Competition Config</button>
-      </div>
+    <!-- STATUS STRIP -->
+    <div class="status-strip">
+      <div><span class="status-dot"></span><span id="statusBar">Syncing live events & highlights from PlayZ Server + Firebase Cloud...</span></div>
+      <div id="countsSummary" style="color:#38bdf8;font-weight:700;">Loading...</div>
     </div>
-  </div>
 
-  <!-- TAB 1: MATCHES -->
-  <div id="tab-matches" style="display:none;">
-    <div class="card">
-      <h3>Add / Update Match & Stream Association (লিভ বা আপকামিং ম্যাচ ও স্ট্রিম)</h3>
-      <p style="font-size:12px;color:var(--muted);margin-top:4px;">কার্ডের মধ্যে শুধুমাত্র দুটি দলের লোগো/পতাকা, নাম, টুর্নামেন্ট, কিকঅফ সময় ও স্ট্যাটাস দেখাবে (কোনো স্কোর দেখানো হবে না)।</p>
-      <div class="form-grid">
-        <div>
-          <label>Provider / Match ID (Unique)</label>
-          <input id="m_id" placeholder="e.g. espn-401654321 or crex-1A2B" />
-        </div>
-        <div>
-          <label>Sport Category</label>
-          <select id="m_sport">
-            <option value="FOOTBALL">FOOTBALL</option>
-            <option value="CRICKET">CRICKET</option>
-          </select>
-        </div>
-        <div>
-          <label>Competition / League Header</label>
-          <input id="m_tournament" placeholder="FOOTBALL • UEFA CHAMPIONS LEAGUE" />
-        </div>
-        <div>
-          <label>Match Status</label>
-          <select id="m_status">
-            <option value="LIVE">LIVE</option>
-            <option value="UPCOMING">UPCOMING</option>
-            <option value="FINISHED">FINISHED</option>
-            <option value="UNKNOWN">UNKNOWN</option>
-          </select>
-        </div>
-        <div>
-          <label>Team Type (Logo vs National Flag)</label>
-          <select id="m_is_national">
-            <option value="false">Club Team (Use Official Club Crest)</option>
-            <option value="true">National Team (Use Country Flag)</option>
-          </select>
-        </div>
-        <div>
-          <label>Kickoff Time & Date (Asia/Dhaka)</label>
-          <input id="m_time" placeholder="Today, 09:00 PM" />
-        </div>
-        <div>
-          <label>Team 1 Full Name</label>
-          <input id="m_t1name" placeholder="Real Madrid" />
-        </div>
-        <div>
-          <label>Team 1 Short Code</label>
-          <input id="m_t1code" placeholder="RMA" />
-        </div>
-        <div>
-          <label>Team 1 Crest / Flag URL</label>
-          <input id="m_t1flag" placeholder="https://a.espncdn.com/i/teamlogos/soccer/500/86.png" />
-        </div>
-        <div>
-          <label>Team 2 Full Name</label>
-          <input id="m_t2name" placeholder="Manchester City" />
-        </div>
-        <div>
-          <label>Team 2 Short Code</label>
-          <input id="m_t2code" placeholder="MCI" />
-        </div>
-        <div>
-          <label>Team 2 Crest / Flag URL</label>
-          <input id="m_t2flag" placeholder="https://a.espncdn.com/i/teamlogos/soccer/500/382.png" />
-        </div>
-        <div>
-          <label>Status / Countdown Text (No Score)</label>
-          <input id="m_timer" placeholder="LIVE NOW or Starts in 2h 15m" />
-        </div>
-        <div>
-          <label>Approved Highlight Video URL (Optional)</label>
-          <input id="m_highlight" placeholder="https://..." />
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <label>Primary Stream Server 1 (FHD) — URL, Priority & Status</label>
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;">
-            <input id="m_stream1" placeholder="https://..." />
-            <select id="m_stream1_enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <input id="m_stream1_priority" type="number" value="0" placeholder="Priority (0=Top)" />
+    <!-- SPORT CIRCLES FILTER ROW (Shown on Live Events & Highlights) -->
+    <div class="sport-circles-row" id="sportFilterRow"></div>
+
+    <!-- STATUS PILLS ROW (Shown on Live Events) -->
+    <div class="status-pills-row" id="statusFilterRow"></div>
+
+    <!-- ================= TAB 1: LIVE EVENTS ================= -->
+    <section id="view-live">
+      <div class="admin-toolbar">
+        <span style="font-size:13px;color:var(--muted);">Tap any match card to view/test its dedicated streams or click <b>+ Add Match</b> to publish a custom match.</span>
+        <button class="btn-add" onclick="toggleEditor('matchEditor')">+ Add / Override Match</button>
+      </div>
+
+      <!-- Add/Edit Match Panel -->
+      <div class="editor-panel" id="matchEditor">
+        <h3 style="font-size:16px;margin-bottom:4px;">Add or Override Live Match & Multiple Streams</h3>
+        <p style="font-size:12px;color:var(--muted);">Changes saved here sync immediately to all PLAYLIVE Android app users via Firebase Cloud.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Match ID (Unique)</label>
+            <input id="m_id" placeholder="e.g. pz-custom-1" />
           </div>
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <label>Backup Stream Server 2 (HD) — URL, Priority & Backup Flag</label>
-          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;">
-            <input id="m_stream2" placeholder="https://..." />
-            <select id="m_stream2_enabled">
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
-            </select>
-            <select id="m_stream2_backup">
-              <option value="true">Backup Server</option>
-              <option value="false">Primary Server</option>
+          <div class="form-group">
+            <label>Sport Category</label>
+            <select id="m_sport">
+              <option value="CRICKET">Cricket</option>
+              <option value="FOOTBALL">Football</option>
+              <option value="TENNIS">Tennis</option>
+              <option value="BOXING">Boxing</option>
+              <option value="BASKETBALL">Basketball</option>
+              <option value="RACING">Motorsport</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Tournament Header</label>
+            <input id="m_tournament" placeholder="e.g. CRICKET | T20 SERIES" />
+          </div>
+          <div class="form-group">
+            <label>Match Status</label>
+            <select id="m_status">
+              <option value="LIVE">Live</option>
+              <option value="UPCOMING">Upcoming</option>
+              <option value="FINISHED">Finished</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Team 1 Name</label>
+            <input id="m_t1name" placeholder="e.g. India" />
+          </div>
+          <div class="form-group">
+            <label>Team 1 Logo URL</label>
+            <input id="m_t1flag" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Team 2 Name</label>
+            <input id="m_t2name" placeholder="e.g. Australia" />
+          </div>
+          <div class="form-group">
+            <label>Team 2 Logo URL</label>
+            <input id="m_t2flag" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Match Time / Date (e.g. 07:30 PM | 06/11/2026)</label>
+            <input id="m_time" placeholder="07:30 PM | 06/11/2026" />
+          </div>
+          <div class="form-group">
+            <label>Stream 1 Name & URL (Name | URL)</label>
+            <input id="m_stream1_name" placeholder="WILLOW FHD" value="WILLOW FHD" />
+          </div>
+          <div class="form-group">
+            <label>Stream 1 Direct URL (.m3u8 or .mpd)</label>
+            <input id="m_stream1" placeholder="https://.../index.m3u8" />
+          </div>
+          <div class="form-group">
+            <label>Stream 1 ClearKey (Optional kid:key)</label>
+            <input id="m_stream1_drm" placeholder="kidHex:keyHex" />
+          </div>
+          <div class="form-group">
+            <label>Stream 2 Name</label>
+            <input id="m_stream2_name" placeholder="WILLOW ALT" value="WILLOW ALT" />
+          </div>
+          <div class="form-group">
+            <label>Stream 2 Direct URL (.m3u8 or .mpd)</label>
+            <input id="m_stream2" placeholder="https://.../index.m3u8" />
+          </div>
+          <div class="form-group">
+            <label>Stream 3 Name</label>
+            <input id="m_stream3_name" placeholder="SonyLiv (Asia)" value="SonyLiv (Asia)" />
+          </div>
+          <div class="form-group">
+            <label>Stream 3 Direct URL (.m3u8 or .mpd)</label>
+            <input id="m_stream3" placeholder="https://.../index.m3u8" />
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <button class="btn-add" onclick="window.saveMatch()">Publish Match to All Users</button>
+          <button class="btn-secondary" onclick="toggleEditor('matchEditor')">Close</button>
         </div>
       </div>
-      <div style="margin-top:14px;">
-        <button class="primary" onclick="saveMatch()">Publish Match & Streams to App Now</button>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3>Active Cloud Matches & Stream Overrides (<span id="matchCount">0</span>)</h3>
-      <div id="matchesList"></div>
+      <div class="cards-list" id="liveMatchesContainer"></div>
+    </section>
+
+    <!-- ================= TAB 2: CATEGORIES ================= -->
+    <section id="view-categories" style="display:none;">
+      <div class="admin-toolbar">
+        <span style="font-size:13px;color:var(--muted);">Channel & Event Categories mirrored with the Android App.</span>
+      </div>
+      <div class="grid-cards" id="categoriesContainer"></div>
+    </section>
+
+    <!-- ================= TAB 3: SPORTS CHANNELS ================= -->
+    <section id="view-sports" style="display:none;">
+      <div class="admin-toolbar">
+        <span style="font-size:13px;color:var(--muted);">Manage 24/7 Live Sports TV Channels across all categories.</span>
+        <button class="btn-add" onclick="toggleEditor('channelEditor')">+ Add Channel</button>
+      </div>
+
+      <div class="editor-panel" id="channelEditor">
+        <h3 style="font-size:16px;margin-bottom:4px;">Add / Update Sports TV Channel</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Channel ID</label>
+            <input id="c_id" placeholder="e.g. ch-tsports-hd" />
+          </div>
+          <div class="form-group">
+            <label>Channel Name</label>
+            <input id="c_name" placeholder="e.g. T Sports HD" />
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <input id="c_cat" placeholder="Cricket / Football / Sports" value="Cricket" />
+          </div>
+          <div class="form-group">
+            <label>Logo URL</label>
+            <input id="c_logo" placeholder="https://..." />
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Stream URL (.m3u8 / .mpd)</label>
+            <input id="c_url" placeholder="https://.../index.m3u8" />
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <button class="btn-add" onclick="window.saveChannel()">Publish Channel</button>
+          <button class="btn-secondary" onclick="toggleEditor('channelEditor')">Close</button>
+        </div>
+      </div>
+
+      <div class="grid-cards" id="channelsContainer"></div>
+    </section>
+
+    <!-- ================= TAB 4: HIGHLIGHTS ================= -->
+    <section id="view-highlights" style="display:none;">
+      <div class="admin-toolbar">
+        <span style="font-size:13px;color:var(--muted);">Match Highlights (All 95 Football & Cricket Highlights + Custom Cloud Highlights).</span>
+        <button class="btn-add" onclick="toggleEditor('highlightEditor')">+ Add Highlight</button>
+      </div>
+
+      <div class="editor-panel" id="highlightEditor">
+        <h3 style="font-size:16px;margin-bottom:4px;">Add / Update Match Highlight Card</h3>
+        <p style="font-size:12px;color:var(--muted);">Appears in the Android App's <b>Highlights</b> tab in the exact same card layout.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Highlight ID</label>
+            <input id="hl_id" placeholder="e.g. hl-custom-1" />
+          </div>
+          <div class="form-group">
+            <label>Sport</label>
+            <select id="hl_sport">
+              <option value="FOOTBALL">Football</option>
+              <option value="CRICKET">Cricket</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tournament Name</label>
+            <input id="hl_tournament" placeholder="e.g. UEFA Europa League" />
+          </div>
+          <div class="form-group">
+            <label>Tournament Logo URL</label>
+            <input id="hl_event_logo" placeholder="https://api.sofascore.com/api/v1/unique-tournament/465/image/dark" />
+          </div>
+          <div class="form-group">
+            <label>Team 1 Name</label>
+            <input id="hl_t1name" placeholder="e.g. Bayer 04 Leverkusen" />
+          </div>
+          <div class="form-group">
+            <label>Team 1 Crest / Flag URL</label>
+            <input id="hl_t1logo" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Team 2 Name</label>
+            <input id="hl_t2name" placeholder="e.g. Olympique de Marseille" />
+          </div>
+          <div class="form-group">
+            <label>Team 2 Crest / Flag URL</label>
+            <input id="hl_t2logo" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Time (e.g. 02:00 AM)</label>
+            <input id="hl_time" placeholder="02:00 AM" />
+          </div>
+          <div class="form-group">
+            <label>Date (e.g. 06/11/2026)</label>
+            <input id="hl_date" placeholder="06/11/2026" />
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Highlight Video Stream URL (.m3u8 or .mp4)</label>
+            <input id="hl_url" placeholder="https://.../master.m3u8" />
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <button class="btn-add" onclick="window.saveHighlight()">Publish Highlight to App</button>
+          <button class="btn-secondary" onclick="toggleEditor('highlightEditor')">Close</button>
+        </div>
+      </div>
+
+      <div class="cards-list" id="highlightsContainer"></div>
+    </section>
+
+    <!-- ================= TAB 5: SETTINGS ================= -->
+    <section id="view-settings" style="display:none;">
+      <div class="editor-panel open" style="border-color:var(--border);">
+        <h3 style="font-size:17px;margin-bottom:6px;">App Broadcast & Global Control Settings</h3>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Update app title, announcement notice, Telegram link, and provider sync interval for all users.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>App Header Title</label>
+            <input id="s_title" value="PLAYLIVE" />
+          </div>
+          <div class="form-group">
+            <label>Telegram Community Link</label>
+            <input id="s_tg" value="https://t.me/sports_live_streams" />
+          </div>
+          <div class="form-group">
+            <label>Live Auto-Refresh Interval</label>
+            <select id="p_refresh_sec">
+              <option value="15">15 Seconds</option>
+              <option value="30" selected>30 Seconds</option>
+              <option value="60">60 Seconds</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Admin PIN Code</label>
+            <input id="s_pin" value="1234" />
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>In-App Announcement Banner</label>
+            <input id="s_announce" value="Welcome to PLAYLIVE! All Sports • Live • Anytime • Anywhere in Ultra HD." />
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Custom M3U Playlist Block (Auto-merged into Channels & Live Streams)</label>
+            <textarea id="s_m3u" rows="4" placeholder="#EXTM3U&#10;#EXTINF:-1,WILLOW FHD&#10;https://.../index.m3u8"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn-add" onclick="window.saveSettings()">Save & Broadcast Settings to All Devices</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MULTIPLE STREAMS AVAILABLE MODAL (Matches App Dialog 100%) -->
+  <div class="modal-backdrop" id="streamsModalBackdrop" onclick="if(event.target===this) closeStreamsModal()">
+    <div class="streams-modal">
+      <div class="modal-signal-circle">(((•)))</div>
+      <div class="modal-heading">Multiple Streams Available</div>
+      <div class="modal-sub" id="modalSubTitle">Choose your preferred stream</div>
+
+      <div class="video-preview-box" id="videoPreviewBox">
+        <video id="modalVideoPlayer" controls playsinline></video>
+      </div>
+
+      <div id="modalStreamsList"></div>
+
+      <button class="cancel-modal-btn" onclick="closeStreamsModal()">✕ &nbsp;Cancel</button>
     </div>
   </div>
 
-  <!-- TAB 2: CHANNELS -->
-  <div id="tab-channels" style="display:none;">
-    <div class="card">
-      <h3>Add / Update Live TV Channel</h3>
-      <div class="form-grid">
-        <div>
-          <label>Channel ID</label>
-          <input id="c_id" placeholder="ch-tsports" />
-        </div>
-        <div>
-          <label>Channel Name</label>
-          <input id="c_name" placeholder="T Sports HD" />
-        </div>
-        <div>
-          <label>Category</label>
-          <input id="c_cat" placeholder="Bangla Sports" />
-        </div>
-        <div>
-          <label>Channel Status</label>
-          <select id="c_enabled">
-            <option value="true">Enabled (Visible in App)</option>
-            <option value="false">Disabled (Hidden)</option>
-          </select>
-        </div>
-        <div>
-          <label>Logo URL (Optional)</label>
-          <input id="c_logo" placeholder="https://..." />
-        </div>
-        <div>
-          <label>Stream Priority Order</label>
-          <input id="c_priority" type="number" value="0" />
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <label>Stream M3U8 Link</label>
-          <input id="c_url" placeholder="https://..." />
-        </div>
-      </div>
-      <div style="margin-top:14px;">
-        <button class="primary" onclick="saveChannel()">Publish Channel to App Now</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Active Cloud Channels (<span id="channelCount">0</span>)</h3>
-      <div id="channelsList"></div>
-    </div>
-  </div>
-
-  <!-- TAB 3: SETTINGS -->
-  <div id="tab-settings" style="display:none;">
-    <div class="card">
-      <h3>Global App Broadcast Settings</h3>
-      <div class="form-grid">
-        <div>
-          <label>App Title</label>
-          <input id="s_title" value="Sports Live" />
-        </div>
-        <div>
-          <label>Telegram Community Link</label>
-          <input id="s_tg" value="https://t.me/sports_live_streams" />
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <label>Announcement Banner Message</label>
-          <input id="s_announce" value="Welcome to Sports Live!" />
-        </div>
-      </div>
-      <div style="margin-top:14px;">
-        <button class="primary" onclick="saveSettings()">Save & Broadcast Settings</button>
-      </div>
-    </div>
+  <!-- BOTTOM FLOATING PILL NAVIGATION BAR (Exact 5 Tabs from Screenshot) -->
+  <div class="bottom-nav-wrap">
+    <nav class="bottom-nav">
+      <button class="nav-tab active" id="nav-live" onclick="switchScreen('live')">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+        <span>Live Events</span>
+      </button>
+      <button class="nav-tab" id="nav-categories" onclick="switchScreen('categories')">
+        <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zm-5-6l-7 4V7z"/></svg>
+        <span>Categories</span>
+      </button>
+      <button class="nav-tab" id="nav-sports" onclick="switchScreen('sports')">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.3l1.35-.95a8.014 8.014 0 014.38 3.34l-.39 1.34-1.35.46L13 6.7V5.3zm-3.35-.95L11 5.3v1.4L7.01 9.49l-1.35-.46-.39-1.34a8.014 8.014 0 014.38-3.34zM7.08 17.11l-1.14.1A7.962 7.962 0 014 12c0-.12.01-.23.02-.35l1-.73 1.38.48 1.46 4.34-.78 1.37zm7.42 2.48c-.79.26-1.63.41-2.5.41s-1.71-.15-2.5-.41l-.69-1.49.64-1.1h5.11l.64 1.11-.7 1.48zM14.27 15H9.73l-1.35-4.02L12 8.44l3.63 2.54L14.27 15zm3.79 2.21l-1.14-.1-.79-1.37 1.46-4.34 1.39-.47 1 .73c.01.11.02.22.02.34 0 1.99-.73 3.81-1.94 5.21z"/></svg>
+        <span>Sports</span>
+      </button>
+      <button class="nav-tab" id="nav-highlights" onclick="switchScreen('highlights')">
+        <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+        <span>Highlights</span>
+      </button>
+      <button class="nav-tab" id="nav-settings" onclick="switchScreen('settings')">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    const VERIFIED_LEAGUES = [
-      { id: "uefa.champions", name: "UEFA Champions League" },
-      { id: "fifa.worldq.uefa", name: "FIFA World Cup Qualifiers — UEFA" },
-      { id: "fifa.worldq.conmebol", name: "FIFA World Cup Qualifiers — CONMEBOL" },
-      { id: "uefa.nations", name: "UEFA Nations League" },
-      { id: "eng.1", name: "English Premier League" },
-      { id: "esp.1", name: "La Liga" },
-      { id: "ita.1", name: "Serie A" },
-      { id: "ger.1", name: "Bundesliga" },
-      { id: "fra.1", name: "Ligue 1" },
-      { id: "fifa.world", name: "FIFA World Cup" },
-      { id: "fifa.worldq.concacaf", name: "FIFA WC Qualifiers — CONCACAF" },
-      { id: "fifa.worldq.caf", name: "FIFA WC Qualifiers — CAF" },
-      { id: "fifa.worldq.afc", name: "FIFA WC Qualifiers — AFC" },
-      { id: "fifa.worldq.ofc", name: "FIFA WC Qualifiers — OFC" },
-      { id: "uefa.euro", name: "UEFA European Championship" },
-      { id: "conmebol.america", name: "CONMEBOL Copa America" },
-      { id: "caf.nations", name: "CAF Africa Cup of Nations" },
-      { id: "afc.cup", name: "AFC Asian Cup" },
-      { id: "concacaf.gold", name: "CONCACAF Gold Cup" },
-      { id: "fifa.friendly", name: "International Friendlies" },
-      { id: "uefa.europa", name: "UEFA Europa League" },
-      { id: "uefa.europa.conf", name: "UEFA Conference League" },
-      { id: "conmebol.libertadores", name: "CONMEBOL Libertadores" },
-      { id: "conmebol.sudamericana", name: "CONMEBOL Sudamericana" },
-      { id: "afc.champions", name: "AFC Champions League Elite" },
-      { id: "caf.champions", name: "CAF Champions League" },
-      { id: "concacaf.champions", name: "CONCACAF Champions Cup" },
-      { id: "fifa.cwc", name: "FIFA Club World Cup" },
-      { id: "eng.fa", name: "English FA Cup" },
-      { id: "eng.league_cup", name: "English Carabao Cup" },
-      { id: "esp.copa_del_rey", name: "Spanish Copa del Rey" },
-      { id: "ita.coppa_italia", name: "Coppa Italia" },
-      { id: "ger.dfb_pokal", name: "German DFB-Pokal" },
-      { id: "fra.coupe_de_france", name: "Coupe de France" },
-      { id: "ned.1", name: "Dutch Eredivisie" },
-      { id: "por.1", name: "Portuguese Primeira Liga" },
-      { id: "tur.1", name: "Turkish Super Lig" },
-      { id: "bel.1", name: "Belgian Pro League" },
-      { id: "sco.1", name: "Scottish Premiership" },
-      { id: "bra.1", name: "Brazilian Serie A" },
-      { id: "arg.1", name: "Argentine Liga Profesional" },
-      { id: "usa.1", name: "Major League Soccer (MLS)" },
-      { id: "mex.1", name: "Mexican Liga MX" },
-      { id: "ksa.1", name: "Saudi Pro League" },
-      { id: "jpn.1", name: "Japanese J1 League" },
-      { id: "aus.1", name: "Australian A-League Men" }
-    ];
+    const PLAYZ_BASE = "https://red-field-c5ad.ladle-meew-fky.workers.dev/https://pabbdyzone.shop/";
+    const PX_KEY_BYTES = new TextEncoder().encode("cz14RStkN01PVE5w");
+    const PX_IV_BYTES = new TextEncoder().encode("WTlEvckd2UR41sdk");
 
-    const CORE_9 = new Set([
-      "uefa.champions", "fifa.worldq.uefa", "fifa.worldq.conmebol", "uefa.nations",
-      "eng.1", "esp.1", "ita.1", "ger.1", "fra.1"
-    ]);
+    // State
+    let activeScreen = "live";
+    let selectedSport = "ALL";
+    let selectedStatus = "ALL";
+    let serverMatches = [];
+    let cloudMatches = [];
+    let serverHighlights = [];
+    let cloudHighlights = [];
+    let cloudChannels = [];
+    let currentUser = null;
+    const createdAtMap = {};
+    let hlsInstance = null;
 
-    const leagueContainer = document.getElementById("leagueCheckboxes");
-    leagueContainer.innerHTML = VERIFIED_LEAGUES.map(l => `
-      <label class="league-item">
-        <input type="checkbox" class="league-cb" value="${l.id}" checked />
-        <span>${l.name} <small style="color:var(--muted);">(${l.id})</small></span>
-      </label>
-    `).join("");
+    // WebCrypto AES-128-CBC Decryption for PlayZ payloads
+    async function decryptPlayzText(rawText) {
+      const cleaned = (rawText || "").trim();
+      if (!cleaned) return null;
+      if (cleaned.startsWith("[") || cleaned.startsWith("{")) return cleaned;
+      try {
+        const b1Str = atob(cleaned);
+        const b1 = new Uint8Array(b1Str.length);
+        for (let i = 0; i < b1Str.length; i++) b1[i] = b1Str.charCodeAt(i);
+        for (let i = 0; i < b1.length - 1; i += 2) {
+          const tmp = b1[i];
+          b1[i] = b1[i + 1];
+          b1[i + 1] = tmp;
+        }
+        b1.reverse();
+        const b2Base64 = new TextDecoder().decode(b1).trim();
+        const cipherStr = atob(b2Base64);
+        const cipherBytes = new Uint8Array(cipherStr.length);
+        for (let i = 0; i < cipherStr.length; i++) cipherBytes[i] = cipherStr.charCodeAt(i);
 
-    window.toggleAllLeagues = (checked) => {
-      document.querySelectorAll(".league-cb").forEach(cb => cb.checked = checked);
+        const cryptoKey = await crypto.subtle.importKey("raw", PX_KEY_BYTES, { name: "AES-CBC" }, false, ["decrypt"]);
+        const decryptedBuf = await crypto.subtle.decrypt({ name: "AES-CBC", iv: PX_IV_BYTES }, cryptoKey, cipherBytes);
+        return new TextDecoder("utf-8").decode(decryptedBuf).trim();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function parseUtcToDhaka(dateStr, timeStr) {
+      try {
+        const [dd, mm, yyyy] = (dateStr || "").split("/").map(Number);
+        const [hh, min, ss] = (timeStr || "00:00:00").split(":").map(Number);
+        const utcMs = Date.UTC(yyyy, (mm || 1) - 1, dd || 1, hh || 0, min || 0, ss || 0);
+        const d = new Date(utcMs);
+        const timeText = d.toLocaleTimeString("en-US", { timeZone: "Asia/Dhaka", hour: "2-digit", minute: "2-digit", hour12: true });
+        const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+        return { epochMs: utcMs, timeText, dateText: parts };
+      } catch (_) {
+        return { epochMs: 0, timeText: timeStr || "", dateText: dateStr || "" };
+      }
+    }
+
+    function mapSport(cat, eventName) {
+      const s = `${cat} ${eventName}`.toLowerCase();
+      if (s.includes("cricket") || s.includes("ipl") || s.includes("odi") || s.includes("t20") || s.includes("test")) return "CRICKET";
+      if (s.includes("tennis") || s.includes("wta") || s.includes("atp")) return "TENNIS";
+      if (s.includes("boxing") || s.includes("ufc") || s.includes("wwe") || s.includes("mma") || s.includes("fight")) return "BOXING";
+      if (s.includes("basketball") || s.includes("nba")) return "BASKETBALL";
+      if (s.includes("racing") || s.includes("f1") || s.includes("motogp") || s.includes("motorsport")) return "RACING";
+      return "FOOTBALL";
+    }
+
+    window.syncPlayzLiveFeed = async () => {
+      document.getElementById("statusBar").textContent = "Fetching live events.txt & highlights.txt from PlayZ Server...";
+      try {
+        const [evRes, hlRes] = await Promise.all([
+          fetch(PLAYZ_BASE + "events.txt"),
+          fetch(PLAYZ_BASE + "highlights.txt")
+        ]);
+        const [evRaw, hlRaw] = await Promise.all([evRes.text(), hlRes.text()]);
+        const [evJsonStr, hlJsonStr] = await Promise.all([decryptPlayzText(evRaw), decryptPlayzText(hlRaw)]);
+
+        if (evJsonStr) {
+          const arr = JSON.parse(evJsonStr);
+          const nowMs = Date.now();
+          const parsed = [];
+          arr.forEach((w, idx) => {
+            const ev = w.event ? JSON.parse(w.event) : w;
+            if (ev.visible === false) return;
+            const t1 = (ev.teamAName || "").trim();
+            const t2 = (ev.teamBName || "").trim();
+            if (!t1 || !t2 || t1.includes("*")) return;
+            const { epochMs, timeText, dateText } = parseUtcToDhaka(ev.date, ev.time);
+            const durationMs = ((ev.duration || 165) * 60000);
+            const endMs = epochMs + durationMs;
+            if (epochMs > 0 && nowMs > endMs + 24 * 3600 * 1000) return;
+            const status = (epochMs > 0 && nowMs >= epochMs && nowMs <= endMs) ? "LIVE" : (epochMs > nowMs ? "UPCOMING" : "FINISHED");
+            const sport = mapSport(ev.category || "", ev.eventName || "");
+            const logo = (ev.eventLogo || "").replace("http://", "https://");
+            parsed.push({
+              id: `pz-ev-${idx}`,
+              sport,
+              categoryLabel: ev.category || sport,
+              tournament: `${(ev.category || sport).toUpperCase()} | ${(ev.eventName || "").trim()}`,
+              eventLogo: logo,
+              team1Name: t1,
+              team2Name: t2,
+              team1FlagUrl: (ev.teamAFlag || logo).replace("http://", "https://"),
+              team2FlagUrl: (ev.teamBFlag || logo).replace("http://", "https://"),
+              status,
+              timeText,
+              dateText,
+              matchTime: `${timeText} | ${dateText}`,
+              epochMs,
+              linksPtr: ev.links || "",
+              linkNames: ev.link_names || [],
+              streams: []
+            });
+          });
+          serverMatches = parsed;
+        }
+
+        if (hlJsonStr) {
+          const arr = JSON.parse(hlJsonStr);
+          const parsedHl = [];
+          arr.forEach((w, idx) => {
+            const hl = w.highlight ? JSON.parse(w.highlight) : w;
+            if (hl.visible === false) return;
+            const t1 = (hl.teamAName || "").trim();
+            const t2 = (hl.teamBName || "").trim();
+            if (!t1 && !t2) return;
+            const cat = (hl.category || "Football").trim();
+            const evName = (hl.eventName || cat).trim();
+            const sport = mapSport(cat, evName);
+            const logo = (hl.eventLogo || "").replace("http://", "https://");
+            const { epochMs, timeText, dateText } = parseUtcToDhaka(hl.date, hl.time);
+            parsedHl.push({
+              id: `pz-hl-${idx}`,
+              idx,
+              sport,
+              categoryLabel: cat,
+              tournament: evName,
+              eventLogo: logo,
+              team1Name: t1,
+              team2Name: t2,
+              team1Logo: (hl.teamAFlag || logo).replace("http://", "https://"),
+              team2Logo: (hl.teamBFlag || logo).replace("http://", "https://"),
+              timeText,
+              dateText,
+              timestampEpochMs: epochMs,
+              linksPtr: hl.links || "",
+              linkNames: hl.link_names || []
+            });
+          });
+          parsedHl.sort((a, b) => (b.timestampEpochMs - a.timestampEpochMs) || (a.idx - b.idx));
+          serverHighlights = parsedHl;
+        }
+
+        document.getElementById("statusBar").textContent =
+          `✓ Live Server Synced: ${serverMatches.length} Matches & ${serverHighlights.length} Highlights Ready`;
+        renderActiveScreen();
+      } catch (err) {
+        document.getElementById("statusBar").textContent = "Server sync notice: " + err.message;
+        renderActiveScreen();
+      }
     };
 
-    window.toggleCore9Leagues = () => {
-      document.querySelectorAll(".league-cb").forEach(cb => {
-        cb.checked = CORE_9.has(cb.value);
+    // SVG Sport Outline Icons matching Android App
+    function getSportSvg(sport) {
+      if (sport === "ALL") {
+        return `<svg width="36" height="36" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="24" cy="24" r="18" stroke-dasharray="90 20"/><circle cx="24" cy="24" r="11"/><text x="24" y="27" text-anchor="middle" fill="#fff" stroke="none" font-size="8.5" font-weight="800">ALL</text></svg>`;
+      }
+      if (sport === "FOOTBALL") {
+        return `<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.3l1.35-.95a8.014 8.014 0 014.38 3.34l-.39 1.34-1.35.46L13 6.7V5.3zm-3.35-.95L11 5.3v1.4L7.01 9.49l-1.35-.46-.39-1.34a8.014 8.014 0 014.38-3.34zM7.08 17.11l-1.14.1A7.962 7.962 0 014 12c0-.12.01-.23.02-.35l1-.73 1.38.48 1.46 4.34-.78 1.37zm7.42 2.48c-.79.26-1.63.41-2.5.41s-1.71-.15-2.5-.41l-.69-1.49.64-1.1h5.11l.64 1.11-.7 1.48zM14.27 15H9.73l-1.35-4.02L12 8.44l3.63 2.54L14.27 15zm3.79 2.21l-1.14-.1-.79-1.37 1.46-4.34 1.39-.47 1 .73c.01.11.02.22.02.34 0 1.99-.73 3.81-1.94 5.21z"/></svg>`;
+      }
+      if (sport === "CRICKET") {
+        return `<svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.3"><line x1="16" y1="15" x2="14" y2="40"/><line x1="24" y1="15" x2="24" y2="40"/><line x1="32" y1="15" x2="35" y2="40"/><circle cx="22" cy="23" r="5" fill="#151e2e" stroke="#fff" stroke-width="2.2"/><line x1="15" y1="10" x2="22" y2="8"/><line x1="27" y1="8" x2="34" y2="11"/></svg>`;
+      }
+      return `<svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><path d="M5 12h14M12 5v14" stroke="#fff" stroke-width="2"/></svg>`;
+    }
+
+    function renderSportFilters(itemsList, isHighlights) {
+      const counts = { ALL: itemsList.length, FOOTBALL: 0, CRICKET: 0, TENNIS: 0, BOXING: 0, BASKETBALL: 0, RACING: 0 };
+      itemsList.forEach(it => { counts[it.sport] = (counts[it.sport] || 0) + 1; });
+
+      const order = isHighlights
+        ? [
+            { key: "ALL", label: "All" },
+            { key: "FOOTBALL", label: "Football" },
+            { key: "CRICKET", label: "Cricket" },
+            ...(counts.TENNIS ? [{ key: "TENNIS", label: "Tennis" }] : []),
+            ...(counts.BOXING ? [{ key: "BOXING", label: "Boxing" }] : [])
+          ]
+        : [
+            { key: "ALL", label: "All" },
+            { key: "CRICKET", label: "Cricket" },
+            { key: "FOOTBALL", label: "Football" },
+            { key: "BOXING", label: "Boxing" },
+            { key: "BASKETBALL", label: "Basketball" },
+            { key: "RACING", label: "Motorsport" },
+            ...(counts.TENNIS ? [{ key: "TENNIS", label: "Tennis" }] : [])
+          ];
+
+      const row = document.getElementById("sportFilterRow");
+      row.innerHTML = order.map(s => `
+        <div class="sport-circle-item ${selectedSport === s.key ? "active" : ""}" onclick="selectSport('${s.key}')">
+          <div class="sport-circle-box">
+            ${getSportSvg(s.key)}
+            <span class="sport-badge">${counts[s.key] || 0}</span>
+          </div>
+          <span class="sport-circle-label">${s.label}</span>
+        </div>
+      `).join("");
+    }
+
+    window.selectSport = (s) => {
+      selectedSport = (selectedSport === s && s !== "ALL") ? "ALL" : s;
+      renderActiveScreen();
+    };
+
+    window.selectStatus = (st) => {
+      selectedStatus = st;
+      renderActiveScreen();
+    };
+
+    window.toggleSearch = () => {
+      document.getElementById("searchWrap").classList.toggle("open");
+      document.getElementById("searchInput").focus();
+    };
+
+    window.toggleEditor = (id) => {
+      document.getElementById(id).classList.toggle("open");
+    };
+
+    window.switchScreen = (scr) => {
+      activeScreen = scr;
+      selectedSport = "ALL";
+      ["live", "categories", "sports", "highlights", "settings"].forEach(s => {
+        document.getElementById("view-" + s).style.display = (s === scr) ? "block" : "none";
+        document.getElementById("nav-" + s).classList.toggle("active", s === scr);
       });
+      const titles = {
+        live: "PLAYLIVE",
+        categories: "Categories",
+        sports: "Sports",
+        highlights: "Highlights",
+        settings: "Settings"
+      };
+      document.getElementById("screenTitle").textContent = titles[scr] || "PLAYLIVE";
+      document.getElementById("sportFilterRow").style.display = (scr === "live" || scr === "highlights") ? "flex" : "none";
+      document.getElementById("statusFilterRow").style.display = (scr === "live") ? "flex" : "none";
+      renderActiveScreen();
     };
 
+    window.renderActiveScreen = () => {
+      const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+      const allMatches = [...cloudMatches, ...serverMatches];
+      const allHighlights = [...cloudHighlights, ...serverHighlights];
+      document.getElementById("countsSummary").textContent =
+        `Live Events: ${allMatches.length} • Highlights: ${allHighlights.length} • Channels: ${cloudChannels.length}`;
+
+      if (activeScreen === "live") {
+        renderSportFilters(allMatches, false);
+        const sportFiltered = allMatches.filter(m =>
+          (selectedSport === "ALL" || m.sport === selectedSport) &&
+          (!q || `${m.team1Name} ${m.team2Name} ${m.tournament}`.toLowerCase().includes(q))
+        );
+        const liveCnt = sportFiltered.filter(m => m.status === "LIVE").length;
+        const upCnt = sportFiltered.filter(m => m.status === "UPCOMING").length;
+        const finCnt = sportFiltered.filter(m => m.status === "FINISHED").length;
+
+        document.getElementById("statusFilterRow").innerHTML = [
+          { k: "ALL", l: `All (${sportFiltered.length})` },
+          { k: "LIVE", l: `Live (${liveCnt})` },
+          { k: "UPCOMING", l: `Upcoming (${upCnt})` },
+          { k: "FINISHED", l: `Finished (${finCnt})` }
+        ].map(p => `
+          <button class="status-pill ${selectedStatus === p.k ? "active" : ""}" onclick="selectStatus('${p.k}')">
+            ${selectedStatus === p.k ? "✓ " : ""}${p.l}
+          </button>
+        `).join("");
+
+        const finalMatches = sportFiltered.filter(m => selectedStatus === "ALL" || m.status === selectedStatus);
+        const container = document.getElementById("liveMatchesContainer");
+        container.innerHTML = finalMatches.map(m => `
+          <div class="match-card" onclick="openItemStreamsModal('match', '${m.id}')">
+            <div class="card-top-row">
+              <div class="card-league-wrap">
+                ${m.eventLogo ? `<img class="card-league-logo" src="${m.eventLogo}" onerror="this.style.display='none'"/>` : ""}
+                <span class="card-league-title">${m.tournament}</span>
+              </div>
+              <div class="card-datetime">
+                <span class="card-time-blue">${m.timeText || ""}</span>
+                <span class="card-date-white">${m.dateText || m.matchTime || ""}</span>
+              </div>
+            </div>
+            <div class="card-teams-row">
+              <div class="team-side">
+                <img class="team-logo" src="${m.team1FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                <span class="team-name">${m.team1Name}</span>
+              </div>
+              <div class="center-status">
+                ${m.status === "LIVE"
+                  ? `<div class="live-badge-center"><span class="live-dot"></span>Live</div>`
+                  : `<div class="vs-text">VS</div>`
+                }
+              </div>
+              <div class="team-side right">
+                <span class="team-name">${m.team2Name}</span>
+                <img class="team-logo" src="${m.team2FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
+              </div>
+            </div>
+            <div class="card-admin-footer" onclick="event.stopPropagation()">
+              <span>ID: ${m.id} • Streams: ${(m.linkNames && m.linkNames.length) ? m.linkNames.join(", ") : ((m.streams || []).length + " configured")}</span>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-edit" onclick="prefillMatchEditor('${m.id}')">Edit / Override Streams</button>
+                ${m.docId ? `<button class="btn-danger" onclick="window.removeMatch('${m.id}')">Delete</button>` : ""}
+              </div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      if (activeScreen === "highlights") {
+        renderSportFilters(allHighlights, true);
+        const filteredHl = allHighlights.filter(h =>
+          (selectedSport === "ALL" || h.sport === selectedSport) &&
+          (!q || `${h.team1Name} ${h.team2Name} ${h.tournament} ${h.categoryLabel}`.toLowerCase().includes(q))
+        );
+        const container = document.getElementById("highlightsContainer");
+        container.innerHTML = filteredHl.map(h => `
+          <div class="match-card" onclick="openItemStreamsModal('highlight', '${h.id}')">
+            <div class="card-top-row">
+              <div class="card-league-wrap">
+                ${h.eventLogo ? `<img class="card-league-logo" src="${h.eventLogo}" onerror="this.style.display='none'"/>` : ""}
+                <span class="card-league-title">${h.categoryLabel || "Football"} | ${h.tournament}</span>
+              </div>
+              <div class="card-datetime">
+                <span class="card-time-blue">${h.timeText || ""}</span>
+                <span class="card-date-white">${h.dateText || ""}</span>
+              </div>
+            </div>
+            <div class="card-teams-row">
+              <div class="team-side">
+                <img class="team-logo" src="${h.team1Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                <span class="team-name">${h.team1Name}</span>
+              </div>
+              <div class="center-status">
+                <div class="vs-text">VS</div>
+              </div>
+              <div class="team-side right">
+                <span class="team-name">${h.team2Name}</span>
+                <img class="team-logo" src="${h.team2Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
+              </div>
+            </div>
+            <div class="card-admin-footer" onclick="event.stopPropagation()">
+              <span>Highlight ID: ${h.id} • Links: ${(h.linkNames && h.linkNames.length) ? h.linkNames.join(", ") : "Ready"}</span>
+              <div style="display:flex;gap:8px;">
+                ${h.docId ? `<button class="btn-danger" onclick="window.removeHighlight('${h.id}')">Delete</button>` : ""}
+              </div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      if (activeScreen === "categories") {
+        const cats = [
+          { name: "LIVE EVENTS", count: allMatches.length },
+          { name: "HIGHLIGHTS", count: allHighlights.length },
+          { name: "CRICKET LIVE", count: allMatches.filter(m => m.sport === "CRICKET").length },
+          { name: "FOOTBALL LIVE", count: allMatches.filter(m => m.sport === "FOOTBALL").length },
+          { name: "TENNIS LIVE", count: allMatches.filter(m => m.sport === "TENNIS").length },
+          { name: "SPORTS CHANNELS", count: cloudChannels.length }
+        ];
+        document.getElementById("categoriesContainer").innerHTML = cats.map(c => `
+          <div class="channel-card" onclick="if('${c.name}'==='HIGHLIGHTS') switchScreen('highlights'); else if('${c.name}'==='SPORTS CHANNELS') switchScreen('sports'); else switchScreen('live');">
+            <div>
+              <div style="font-size:16px;font-weight:700;">${c.name}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">${c.count} Active Items</div>
+            </div>
+            <span class="fhd-badge">${c.count}</span>
+          </div>
+        `).join("");
+      }
+
+      if (activeScreen === "sports") {
+        document.getElementById("channelsContainer").innerHTML = cloudChannels.length
+          ? cloudChannels.map(c => `
+              <div class="channel-card">
+                <div>
+                  <div style="font-size:15px;font-weight:700;">${c.name}</div>
+                  <div style="font-size:12px;color:var(--muted);">${c.category}</div>
+                </div>
+                <button class="btn-danger" onclick="window.removeChannel('${c.id}')">Delete</button>
+              </div>
+            `).join("")
+          : `<div style="grid-column:1/-1;color:var(--muted);padding:20px;">Sign in with Google or click <b>+ Add Channel</b> to publish custom 24/7 Sports TV Channels.</div>`;
+      }
+    };
+
+    // Resolve and show Multiple Streams Available Modal (Exact Match to Screenshot)
+    window.openItemStreamsModal = async (type, id) => {
+      const allM = [...cloudMatches, ...serverMatches];
+      const allH = [...cloudHighlights, ...serverHighlights];
+      const item = type === "highlight" ? allH.find(x => x.id === id) : allM.find(x => x.id === id);
+      if (!item) return;
+
+      const backdrop = document.getElementById("streamsModalBackdrop");
+      const listEl = document.getElementById("modalStreamsList");
+      const subEl = document.getElementById("modalSubTitle");
+      document.getElementById("videoPreviewBox").classList.remove("open");
+      backdrop.classList.add("open");
+      subEl.textContent = `${item.team1Name} vs ${item.team2Name} — Loading streams...`;
+      listEl.innerHTML = "";
+
+      let streams = [];
+      if (item.streams && item.streams.length) {
+        streams = item.streams;
+      } else if (item.videoUrl) {
+        streams = [{ name: "HIGHLIGHT FHD", url: item.videoUrl, quality: "FHD" }];
+      } else if (item.linksPtr) {
+        try {
+          const cleanPtr = item.linksPtr.replace(/^\/+/, "");
+          const res = await fetch(PLAYZ_BASE + cleanPtr);
+          const raw = await res.text();
+          const dec = await decryptPlayzText(raw);
+          if (dec) {
+            const arr = JSON.parse(dec);
+            streams = arr.map((s, idx) => {
+              const obj = (typeof s.link === "string" && s.link.trim().startsWith("{")) ? JSON.parse(s.link) : s;
+              return {
+                name: obj.name || `Stream ${idx + 1}`,
+                url: (obj.link || "").split("|")[0],
+                quality: "FHD"
+              };
+            });
+          }
+        } catch (_) {}
+      }
+
+      subEl.textContent = "Choose your preferred stream";
+      if (!streams.length) {
+        listEl.innerHTML = `<div style="color:var(--muted);padding:14px;">No direct streams resolved yet. Use Edit / Override to attach custom links.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = streams.map((s, i) => `
+        <button class="stream-row-btn" onclick="playStreamInModal('${(s.url || "").replace(/'/g, "\\'")}')">
+          <div class="stream-row-left">
+            <span style="color:#14b8a6;">☰</span>
+            <span>${s.name}</span>
+          </div>
+          <span class="fhd-badge">${s.quality || "FHD"}</span>
+        </button>
+      `).join("");
+    };
+
+    window.playStreamInModal = (url) => {
+      if (!url) return alert("This stream uses an encrypted token or ClearKey DASH manifest (plays natively inside the PLAYLIVE Android app).");
+      const box = document.getElementById("videoPreviewBox");
+      const video = document.getElementById("modalVideoPlayer");
+      box.classList.add("open");
+      if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+      if (window.Hls && Hls.isSupported() && url.includes(".m3u8")) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      } else {
+        video.src = url;
+        video.play().catch(() => {});
+      }
+    };
+
+    window.closeStreamsModal = () => {
+      const video = document.getElementById("modalVideoPlayer");
+      video.pause();
+      if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+      document.getElementById("streamsModalBackdrop").classList.remove("open");
+    };
+
+    window.prefillMatchEditor = (id) => {
+      const m = [...cloudMatches, ...serverMatches].find(x => x.id === id);
+      if (!m) return;
+      document.getElementById("matchEditor").classList.add("open");
+      document.getElementById("m_id").value = m.id;
+      document.getElementById("m_sport").value = m.sport || "CRICKET";
+      document.getElementById("m_tournament").value = m.tournament || "";
+      document.getElementById("m_status").value = m.status || "LIVE";
+      document.getElementById("m_t1name").value = m.team1Name || "";
+      document.getElementById("m_t1flag").value = m.team1FlagUrl || "";
+      document.getElementById("m_t2name").value = m.team2Name || "";
+      document.getElementById("m_t2flag").value = m.team2FlagUrl || "";
+      document.getElementById("m_time").value = m.matchTime || "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    // Firebase Cloud Sync Setup
     const firebaseConfig = {
       apiKey: "AIzaSyAkvGlSNXao8kNEVAAJLug5dwx4aWaZs8g",
       authDomain: "gen-lang-client-0906457422.firebaseapp.com",
       projectId: "gen-lang-client-0906457422"
     };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app, "ai-studio-android-newapk-58097b75-65e0-474e-b30f-f9b6469d8bb7");
 
-    let currentUser = null;
-    const createdAtMap = {};
-
     document.getElementById("loginBtn").onclick = async () => {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      if (currentUser) {
+        await signOut(auth);
+      } else {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+      }
     };
 
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
-      const authArea = document.getElementById("authArea");
-      const statusBar = document.getElementById("statusBar");
+      const btn = document.getElementById("loginBtn");
       if (user) {
-        authArea.innerHTML = `<span style="font-size:13px;margin-right:10px;">${user.email}</span><button class="danger" id="logoutBtn">Sign Out</button>`;
-        document.getElementById("logoutBtn").onclick = () => signOut(auth);
-        statusBar.textContent = "✓ Connected to Sports Live Cloud Server (ESPN & CREX Real-Time Sync Active)";
+        btn.textContent = `${user.email.split("@")[0]} (Sign Out)`;
+        btn.classList.add("connected");
         listenCloudItems();
       } else {
-        authArea.innerHTML = `<button class="primary" id="loginBtn">Sign in with Google (Admin)</button>`;
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
-        statusBar.textContent = "Please sign in with Google to manage provider sync, live matches & channels.";
+        btn.textContent = "Sign in (Admin)";
+        btn.classList.remove("connected");
       }
     });
 
     function listenCloudItems() {
       onSnapshot(collection(db, "cloud_items"), (snap) => {
-        const matches = [];
-        const channels = [];
+        const cMatches = [];
+        const cHighlights = [];
+        const cChannels = [];
         snap.forEach((d) => {
           const data = d.data();
           createdAtMap[d.id] = data.createdAt;
           try {
             const payload = JSON.parse(data.payloadJson || "{}");
             if (payload.deleted) return;
-            if (data.itemType === "match") matches.push({ docId: d.id, ...payload });
-            if (data.itemType === "channel") channels.push({ docId: d.id, ...payload });
+            if (data.itemType === "match") {
+              if (payload.isHighlightItem) {
+                cHighlights.push({ docId: d.id, ...payload });
+              } else {
+                cMatches.push({ docId: d.id, ...payload });
+              }
+            }
+            if (data.itemType === "channel") cChannels.push({ docId: d.id, ...payload });
             if (data.itemType === "config") {
               if (payload.appTitle) document.getElementById("s_title").value = payload.appTitle;
               if (payload.telegramLink) document.getElementById("s_tg").value = payload.telegramLink;
               if (payload.announcement) document.getElementById("s_announce").value = payload.announcement;
-              if (typeof payload.footballSyncEnabled === "boolean") {
-                document.getElementById("p_football_sync").value = String(payload.footballSyncEnabled);
-              }
-              if (typeof payload.cricketSyncEnabled === "boolean") {
-                document.getElementById("p_cricket_sync").value = String(payload.cricketSyncEnabled);
-              }
-              if (payload.autoRefreshIntervalSec) {
-                document.getElementById("p_refresh_sec").value = String(payload.autoRefreshIntervalSec);
-              }
-              if (Array.isArray(payload.enabledFootballLeagues)) {
-                const enabledSet = new Set(payload.enabledFootballLeagues);
-                document.querySelectorAll(".league-cb").forEach(cb => {
-                  cb.checked = enabledSet.has(cb.value);
-                });
-              }
+              if (payload.adminPin) document.getElementById("s_pin").value = payload.adminPin;
+              if (payload.customM3uBlock) document.getElementById("s_m3u").value = payload.customM3uBlock;
             }
           } catch (_) {}
         });
-        renderMatches(matches);
-        renderChannels(channels);
+        cloudMatches = cMatches;
+        cloudHighlights = cHighlights;
+        cloudChannels = cChannels;
+        renderActiveScreen();
       });
     }
 
-    function renderMatches(matches) {
-      document.getElementById("matchCount").textContent = matches.length;
-      const container = document.getElementById("matchesList");
-      container.innerHTML = matches.map(m => {
-        const enabledStreams = (m.streams || []).filter(s => s.isEnabled !== false).length;
-        return `
-          <div class="item-row">
-            <div>
-              <strong>${m.tournament}</strong><br/>
-              <span style="font-size:13px;color:var(--cyan);">${m.team1Name || m.team1Code} vs ${m.team2Name || m.team2Code} • ${m.status} (${m.matchTime})</span><br/>
-              <span style="font-size:11px;color:var(--muted);">ID: ${m.id} • Enabled Streams: ${enabledStreams}/${(m.streams || []).length}</span>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="danger" onclick="window.removeMatch('${m.id}')">Delete</button>
-            </div>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderChannels(channels) {
-      document.getElementById("channelCount").textContent = channels.length;
-      const container = document.getElementById("channelsList");
-      container.innerHTML = channels.map(c => `
-        <div class="item-row">
-          <div>
-            <strong>${c.name}</strong> <span style="font-size:12px;color:var(--muted);">(${c.category}) • ${c.isEnabled === false ? "Disabled" : "Enabled"}</span>
-          </div>
-          <button class="danger" onclick="window.removeChannel('${c.id}')">Delete</button>
-        </div>
-      `).join("");
-    }
-
     window.saveMatch = async () => {
-      if (!currentUser) return alert("Please sign in with Google first!");
+      if (!currentUser) return alert("Please click 'Sign in (Admin)' at the top-right first!");
       const id = (document.getElementById("m_id").value.trim() || "match-" + Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
       const sport = document.getElementById("m_sport").value;
-      const tournament = document.getElementById("m_tournament").value.trim() || `${sport} • INTERNATIONAL`;
+      const tournament = document.getElementById("m_tournament").value.trim() || `${sport} | LIVE SERIES`;
       const status = document.getElementById("m_status").value;
-      const isNationalTeam = document.getElementById("m_is_national").value === "true" || sport === "CRICKET";
       const t1name = document.getElementById("m_t1name").value.trim() || "Team 1";
-      const t1code = document.getElementById("m_t1code").value.trim() || t1name.slice(0, 3).toUpperCase();
       const t1flag = document.getElementById("m_t1flag").value.trim();
       const t2name = document.getElementById("m_t2name").value.trim() || "Team 2";
-      const t2code = document.getElementById("m_t2code").value.trim() || t2name.slice(0, 3).toUpperCase();
       const t2flag = document.getElementById("m_t2flag").value.trim();
-      const matchTime = document.getElementById("m_time").value.trim() || "Today";
-      const timeOrScore = document.getElementById("m_timer").value.trim() || (status === "LIVE" ? "LIVE NOW" : matchTime);
-      const approvedHighlightUrl = document.getElementById("m_highlight").value.trim();
-
-      const s1 = document.getElementById("m_stream1").value.trim();
-      const s1Enabled = document.getElementById("m_stream1_enabled").value === "true";
-      const s1Priority = parseInt(document.getElementById("m_stream1_priority").value || "0", 10);
-
-      const s2 = document.getElementById("m_stream2").value.trim();
-      const s2Enabled = document.getElementById("m_stream2_enabled").value === "true";
-      const s2Backup = document.getElementById("m_stream2_backup").value === "true";
+      const matchTime = document.getElementById("m_time").value.trim() || "Live Now";
 
       const streams = [];
-      if (s1) streams.push({ id: "s1", name: "SERVER 1 FHD", quality: "1080p FHD", url: s1, isDefault: true, isEnabled: s1Enabled, priorityOrder: s1Priority, isBackup: false });
-      if (s2) streams.push({ id: "s2", name: "SERVER 2 HD", quality: "720p HD", url: s2, isDefault: false, isEnabled: s2Enabled, priorityOrder: s1Priority + 1, isBackup: s2Backup });
+      const s1 = document.getElementById("m_stream1").value.trim();
+      const s1Name = document.getElementById("m_stream1_name").value.trim() || "WILLOW FHD";
+      const s1Drm = document.getElementById("m_stream1_drm").value.trim();
+      if (s1) streams.push({ id: "s1", name: s1Name, quality: "FHD", url: s1, drmLicense: s1Drm || null, drmScheme: s1Drm ? "clearkey" : null, isDefault: true, isEnabled: true, priorityOrder: 1, isBackup: false });
+
+      const s2 = document.getElementById("m_stream2").value.trim();
+      const s2Name = document.getElementById("m_stream2_name").value.trim() || "WILLOW ALT";
+      if (s2) streams.push({ id: "s2", name: s2Name, quality: "FHD", url: s2, isDefault: false, isEnabled: true, priorityOrder: 2, isBackup: false });
+
+      const s3 = document.getElementById("m_stream3").value.trim();
+      const s3Name = document.getElementById("m_stream3_name").value.trim() || "SonyLiv (Asia)";
+      if (s3) streams.push({ id: "s3", name: s3Name, quality: "FHD", url: s3, isDefault: false, isEnabled: true, priorityOrder: 3, isBackup: false });
 
       const payload = {
-        id, tournament, sport, status, matchTime, timeOrScore,
-        team1Name: t1name, team1Code: t1code, team1FlagUrl: t1flag,
-        team2Name: t2name, team2Code: t2code, team2FlagUrl: t2flag,
-        isNationalTeam, approvedHighlightUrl,
-        startTimeEpochMs: Date.now(),
-        streams
+        id, tournament, sport, status, matchTime, timeOrScore: status === "LIVE" ? "Live" : matchTime,
+        team1Name: t1name, team1Code: t1name.slice(0, 3).toUpperCase(), team1FlagUrl: t1flag,
+        team2Name: t2name, team2Code: t2name.slice(0, 3).toUpperCase(), team2FlagUrl: t2flag,
+        isNationalTeam: true, startTimeEpochMs: Date.now(), streams
       };
 
       const docId = `match_${id}`;
       await setDoc(doc(db, "cloud_items", docId), {
-        itemId: docId,
         itemType: "match",
         title: `${t1name} vs ${t2name}`,
         payloadJson: JSON.stringify(payload),
@@ -519,44 +1586,73 @@
         createdAt: createdAtMap[docId] || serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      alert("✓ Match & stream config published to all app users in real time!");
+      alert("✓ Match & Multiple Streams published to all PLAYLIVE app users!");
     };
 
     window.removeMatch = async (id) => {
       if (!currentUser) return;
       const docId = `match_${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      await deleteDoc(doc(db, "cloud_items", docId));
+    };
+
+    window.saveHighlight = async () => {
+      if (!currentUser) return alert("Please click 'Sign in (Admin)' at the top-right first!");
+      const id = (document.getElementById("hl_id").value.trim() || "hl-" + Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const sport = document.getElementById("hl_sport").value;
+      const categoryLabel = sport === "CRICKET" ? "Cricket" : "Football";
+      const tournament = document.getElementById("hl_tournament").value.trim() || "UEFA Europa League";
+      const eventLogo = document.getElementById("hl_event_logo").value.trim();
+      const team1Name = document.getElementById("hl_t1name").value.trim() || "Team 1";
+      const team1Logo = document.getElementById("hl_t1logo").value.trim();
+      const team2Name = document.getElementById("hl_t2name").value.trim() || "Team 2";
+      const team2Logo = document.getElementById("hl_t2logo").value.trim();
+      const timeText = document.getElementById("hl_time").value.trim() || "02:00 AM";
+      const dateText = document.getElementById("hl_date").value.trim() || "06/11/2026";
+      const videoUrl = document.getElementById("hl_url").value.trim();
+
+      const payload = {
+        id, isHighlightItem: true, sport, categoryLabel, tournament, eventLogo,
+        title: `${team1Name} vs ${team2Name}`,
+        team1Name, team1Logo, team2Name, team2Logo,
+        timeText, dateText, timestampEpochMs: Date.now(),
+        duration: `${timeText} ${dateText}`, videoUrl
+      };
+
+      const docId = `match_${id}`;
       await setDoc(doc(db, "cloud_items", docId), {
-        itemId: docId,
         itemType: "match",
-        title: "Deleted",
-        payloadJson: JSON.stringify({ id, deleted: true }),
+        title: `${team1Name} vs ${team2Name}`,
+        payloadJson: JSON.stringify(payload),
         visibility: "public",
         ownerId: currentUser.uid,
         createdAt: createdAtMap[docId] || serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      alert("✓ Highlight Card published to all PLAYLIVE app users!");
+    };
+
+    window.removeHighlight = async (id) => {
+      if (!currentUser) return;
+      const docId = `match_${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      await deleteDoc(doc(db, "cloud_items", docId));
     };
 
     window.saveChannel = async () => {
-      if (!currentUser) return alert("Please sign in with Google first!");
+      if (!currentUser) return alert("Please click 'Sign in (Admin)' at the top-right first!");
       const id = (document.getElementById("c_id").value.trim() || "ch-" + Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
       const name = document.getElementById("c_name").value.trim() || "Sports Channel";
       const category = document.getElementById("c_cat").value.trim() || "Sports";
-      const isEnabled = document.getElementById("c_enabled").value === "true";
-      const priorityOrder = parseInt(document.getElementById("c_priority").value || "0", 10);
       const logoUrl = document.getElementById("c_logo").value.trim();
       const url = document.getElementById("c_url").value.trim();
 
       const payload = {
         id, name, category, logoText: name.slice(0, 3).toUpperCase(), logoUrl,
-        isFavorite: false,
-        isEnabled,
-        streams: url ? [{ id: "s1", name: `${name} FHD`, quality: "FHD", url, isDefault: true, isEnabled, priorityOrder, isBackup: false }] : []
+        isFavorite: false, isEnabled: true,
+        streams: url ? [{ id: "s1", name: `${name} FHD`, quality: "FHD", url, isDefault: true, isEnabled: true, priorityOrder: 1, isBackup: false }] : []
       };
 
       const docId = `channel_${id}`;
       await setDoc(doc(db, "cloud_items", docId), {
-        itemId: docId,
         itemType: "channel",
         title: name,
         payloadJson: JSON.stringify(payload),
@@ -565,7 +1661,7 @@
         createdAt: createdAtMap[docId] || serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      alert("✓ Channel published to all app users!");
+      alert("✓ Sports TV Channel published to all users!");
     };
 
     window.removeChannel = async (id) => {
@@ -575,41 +1671,36 @@
     };
 
     window.saveSettings = async () => {
-      if (!currentUser) return alert("Please sign in with Google first!");
+      if (!currentUser) return alert("Please click 'Sign in (Admin)' at the top-right first!");
       const docId = "config_global_app_config";
-      const enabledFootballLeagues = Array.from(document.querySelectorAll(".league-cb:checked")).map(cb => cb.value);
       const payload = {
-        appTitle: document.getElementById("s_title").value.trim() || "Sports Live",
+        appTitle: document.getElementById("s_title").value.trim() || "PLAYLIVE",
         telegramLink: document.getElementById("s_tg").value.trim(),
         announcement: document.getElementById("s_announce").value.trim(),
-        footballSyncEnabled: document.getElementById("p_football_sync").value === "true",
-        cricketSyncEnabled: document.getElementById("p_cricket_sync").value === "true",
+        adminPin: document.getElementById("s_pin").value.trim() || "1234",
         autoRefreshIntervalSec: parseInt(document.getElementById("p_refresh_sec").value || "30", 10),
-        enabledFootballLeagues,
+        customM3uBlock: document.getElementById("s_m3u").value.trim(),
+        footballSyncEnabled: true,
+        cricketSyncEnabled: true,
         version: "9.0"
       };
       await setDoc(doc(db, "cloud_items", docId), {
-        itemId: docId,
         itemType: "config",
-        title: payload.appTitle || "Sports Live",
+        title: payload.appTitle,
         payloadJson: JSON.stringify(payload),
         visibility: "public",
         ownerId: currentUser.uid,
         createdAt: createdAtMap[docId] || serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      alert("✓ Provider Sync & Broadcast Settings updated across all devices!");
+      alert("✓ Global App Settings broadcasted to all devices!");
     };
-  </script>
-  <script>
-    function switchTab(tab) {
-      ["providers", "matches", "channels", "settings"].forEach(t => {
-        document.getElementById("tab-" + t).style.display = (t === tab) ? "block" : "none";
-      });
-      document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
-        btn.classList.toggle("active", ["providers", "matches", "channels", "settings"][idx] === tab);
-      });
-    }
+
+    // Initial load + automatic real-time server sync every 60 seconds
+    syncPlayzLiveFeed();
+    setInterval(() => {
+      syncPlayzLiveFeed();
+    }, 60000);
   </script>
 </body>
 </html>

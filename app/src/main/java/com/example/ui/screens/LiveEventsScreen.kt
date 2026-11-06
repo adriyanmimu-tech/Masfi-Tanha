@@ -476,7 +476,7 @@ internal fun StatusFilterPill(
 }
 
 @Composable
-private fun AllSportOutlineIcon() {
+internal fun AllSportOutlineIcon() {
     Box(
         modifier = Modifier.size(46.dp),
         contentAlignment = Alignment.Center
@@ -531,7 +531,7 @@ private fun AllSportOutlineIcon() {
 }
 
 @Composable
-private fun CricketOutlineIcon() {
+internal fun CricketOutlineIcon() {
     Canvas(modifier = Modifier.size(46.dp)) {
         val w = size.width
         val h = size.height
@@ -609,7 +609,7 @@ private fun CricketOutlineIcon() {
 }
 
 @Composable
-private fun FootballOutlineIcon() {
+internal fun FootballOutlineIcon() {
     Canvas(modifier = Modifier.size(46.dp)) {
         val w = size.width
         val h = size.height
@@ -644,7 +644,7 @@ private fun FootballOutlineIcon() {
 }
 
 @Composable
-private fun BoxingOutlineIcon() {
+internal fun BoxingOutlineIcon() {
     Canvas(modifier = Modifier.size(46.dp)) {
         val w = size.width
         val h = size.height
@@ -719,7 +719,7 @@ private fun BoxingOutlineIcon() {
 }
 
 @Composable
-private fun BasketballOutlineIcon() {
+internal fun BasketballOutlineIcon() {
     Canvas(modifier = Modifier.size(46.dp)) {
         val w = size.width
         val h = size.height
@@ -804,7 +804,7 @@ private fun BasketballOutlineIcon() {
 }
 
 @Composable
-private fun RacingCarOutlineIcon() {
+internal fun RacingCarOutlineIcon() {
     Canvas(modifier = Modifier.size(46.dp)) {
         val w = size.width
         val h = size.height

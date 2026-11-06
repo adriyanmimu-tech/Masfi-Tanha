@@ -276,7 +276,38 @@ class SportsStreamRepository(
                 "match" -> {
                     try {
                         val obj = JSONObject(item.payloadJson)
-                        if (obj.optBoolean("deleted", false)) {
+                        if (obj.optBoolean("isHighlightItem", false)) {
+                            val hlId = obj.optString("id", item.id).trim()
+                            val currentHl = _highlights.value.toMutableList()
+                            if (obj.optBoolean("deleted", false)) {
+                                currentHl.removeAll { it.id == hlId }
+                            } else {
+                                val sportStr = obj.optString("sport", "FOOTBALL").uppercase(Locale.US)
+                                val sportEnum = runCatching { SportType.valueOf(sportStr) }.getOrDefault(SportType.FOOTBALL)
+                                val hl = HighlightItem(
+                                    id = hlId,
+                                    title = obj.optString("title", "${obj.optString("team1Name")} vs ${obj.optString("team2Name")}"),
+                                    tournament = obj.optString("tournament", "UEFA Europa League"),
+                                    categoryLabel = obj.optString("categoryLabel", if (sportEnum == SportType.CRICKET) "Cricket" else "Football"),
+                                    eventLogo = obj.optString("eventLogo", ""),
+                                    team1Name = obj.optString("team1Name", "Team 1"),
+                                    team2Name = obj.optString("team2Name", "Team 2"),
+                                    team1Logo = obj.optString("team1Logo", ""),
+                                    team2Logo = obj.optString("team2Logo", ""),
+                                    timeText = obj.optString("timeText", ""),
+                                    dateText = obj.optString("dateText", ""),
+                                    timestampEpochMs = obj.optLong("timestampEpochMs", System.currentTimeMillis()),
+                                    duration = obj.optString("duration", "Highlights"),
+                                    thumbnailUrl = obj.optString("eventLogo", ""),
+                                    videoUrl = obj.optString("videoUrl", ""),
+                                    sport = sportEnum,
+                                    isApproved = true
+                                )
+                                val idx = currentHl.indexOfFirst { it.id == hlId }
+                                if (idx >= 0) currentHl[idx] = hl else currentHl.add(0, hl)
+                            }
+                            _highlights.value = currentHl
+                        } else if (obj.optBoolean("deleted", false)) {
                             val delId = obj.optString("id")
                             if (delId.isNotBlank()) deletedMatchIds.add(delId)
                         } else {
@@ -805,9 +836,8 @@ class SportsStreamRepository(
                 }
             }
             if (playzResult.highlights.isNotEmpty()) {
-                val mergedHighlights = (playzResult.highlights + _highlights.value)
-                    .distinctBy { it.title.lowercase(Locale.US) }
-                _highlights.value = mergedHighlights
+                val customHighlights = _highlights.value.filter { !it.id.startsWith("pz-hl-") }
+                _highlights.value = (customHighlights + playzResult.highlights).distinctBy { it.id }
             }
 
             // Merge newly discovered live M3U channels into the Channels list without removing Admin/user channels
@@ -964,9 +994,24 @@ class SportsStreamRepository(
                 id = highlight.id,
                 name = highlight.title,
                 url = url,
-                quality = "1080p HD"
+                quality = "FHD"
             )
         )
+    }
+
+    fun addOrUpdateHighlight(highlight: HighlightItem) {
+        val current = _highlights.value.toMutableList()
+        val idx = current.indexOfFirst { it.id == highlight.id }
+        if (idx >= 0) {
+            current[idx] = highlight
+        } else {
+            current.add(0, highlight)
+        }
+        _highlights.value = current
+    }
+
+    fun deleteHighlight(highlightId: String) {
+        _highlights.value = _highlights.value.filter { it.id != highlightId }
     }
 
     // Match Operations (Admin stream & metadata overrides)
