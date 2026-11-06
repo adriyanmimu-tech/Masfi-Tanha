@@ -7,17 +7,17 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     :root {
-      --bg: #0b111e;
-      --surface: #151f30;
-      --surface-alt: #1a2639;
-      --border: #2a3b54;
-      --blue: #3b82f6;
-      --blue-glow: #2563eb;
-      --cyan: #14b8a6;
-      --red: #e53935;
-      --gold: #f5b301;
-      --green: #10b981;
-      --text: #ffffff;
+      --bg: #070a10;
+      --surface: #0f1623;
+      --surface-alt: #172235;
+      --border: #23324d;
+      --blue: #00f59b;
+      --blue-glow: #00c97e;
+      --cyan: #00e5ff;
+      --red: #ff2e54;
+      --gold: #ffb800;
+      --green: #00f59b;
+      --text: #f8fafc;
       --muted: #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -33,19 +33,19 @@
       padding: 0 12px;
     }
 
-    /* Top App Bar matching PLAYLIVE / Highlights Screenshot */
+    /* Top App Bar — Obsidian Carbon & Electric Emerald Neon */
     .top-bar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(11, 17, 30, 0.96);
-      backdrop-filter: blur(12px);
-      padding: 14px 6px 10px;
+      background: rgba(7, 10, 16, 0.96);
+      backdrop-filter: blur(14px);
+      padding: 14px 6px 11px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      border-bottom: 1px solid rgba(42, 59, 84, 0.45);
+      border-bottom: 1px solid rgba(0, 245, 155, 0.28);
     }
     .top-title-wrap {
       display: flex;
@@ -53,52 +53,53 @@
       gap: 10px;
     }
     .top-title {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 0.2px;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
       color: #fff;
     }
     .admin-pill {
-      background: linear-gradient(135deg, #2563eb, #14b8a6);
-      color: #fff;
-      font-size: 11px;
+      background: rgba(0, 245, 155, 0.14);
+      border: 1px solid rgba(0, 245, 155, 0.5);
+      color: var(--blue);
+      font-size: 10px;
       font-weight: 800;
       padding: 3px 9px;
-      border-radius: 99px;
-      letter-spacing: 0.5px;
+      border-radius: 8px;
+      letter-spacing: 0.7px;
     }
     .top-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
     }
     .icon-btn {
-      background: transparent;
-      border: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
       color: #fff;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: all 0.15s;
     }
-    .icon-btn:hover { background: rgba(255,255,255,0.08); }
+    .icon-btn:hover { border-color: var(--blue); color: var(--blue); }
     .auth-btn {
-      background: #1e2d47;
-      color: #fff;
+      background: #121c2e;
+      color: var(--blue);
       border: 1px solid var(--blue);
-      padding: 7px 14px;
-      border-radius: 99px;
+      padding: 8px 14px;
+      border-radius: 12px;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
     }
     .auth-btn.connected {
       border-color: var(--green);
-      color: #34d399;
+      color: #00f59b;
     }
 
     /* Search Drawer */
@@ -143,65 +144,60 @@
       box-shadow: 0 0 8px var(--green);
     }
 
-    /* Circular Sport Filter Row matching Screenshot */
+    /* Neon Capsule Sport Filter Dock (First Idea UI) */
     .sport-circles-row {
       display: flex;
-      gap: 16px;
+      gap: 10px;
       overflow-x: auto;
-      padding: 12px 4px 8px;
+      padding: 12px 4px 10px;
       scrollbar-width: none;
     }
     .sport-circles-row::-webkit-scrollbar { display: none; }
-    .sport-circle-item {
-      display: flex;
-      flex-direction: column;
+    .sport-capsule-item {
+      display: inline-flex;
       align-items: center;
+      gap: 8px;
+      padding: 9px 15px;
+      border-radius: 16px;
+      background: #0F1623;
+      border: 1.3px solid #1E2C42;
       cursor: pointer;
       user-select: none;
-      min-width: 68px;
+      white-space: nowrap;
+      transition: all 0.18s ease;
     }
-    .sport-circle-box {
-      position: relative;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: #151e2e;
-      border: 1.4px solid #223044;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.18s;
+    .sport-capsule-item:hover {
+      border-color: rgba(0, 245, 155, 0.5);
+      transform: translateY(-1px);
     }
-    .sport-circle-item.active .sport-circle-box {
-      border: 2.2px solid var(--blue);
-      box-shadow: 0 0 14px rgba(59, 130, 246, 0.38);
+    .sport-capsule-item.active {
+      background: linear-gradient(90deg, rgba(0, 245, 155, 0.2), rgba(0, 229, 255, 0.12));
+      border: 1.6px solid var(--neon);
+      box-shadow: 0 0 16px rgba(0, 245, 155, 0.22);
+    }
+    .sport-capsule-emoji {
+      font-size: 16px;
+    }
+    .sport-capsule-label {
+      font-size: 13.5px;
+      color: #8E9BAE;
+      font-weight: 600;
+    }
+    .sport-capsule-item.active .sport-capsule-label {
+      font-weight: 800;
+      color: #F4F8FF;
     }
     .sport-badge {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      background: var(--red);
-      color: #fff;
-      font-size: 10px;
+      background: #172234;
+      color: var(--cyan);
+      font-size: 11px;
       font-weight: 800;
-      min-width: 22px;
-      height: 22px;
-      padding: 0 5px;
+      padding: 2px 8px;
       border-radius: 99px;
-      border: 1.5px solid #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    .sport-circle-label {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #fff;
-      font-weight: 500;
-    }
-    .sport-circle-item.active .sport-circle-label {
-      font-weight: 700;
-      color: var(--blue);
+    .sport-capsule-item.active .sport-badge {
+      background: var(--neon);
+      color: #04120B;
     }
 
     /* Status Filter Pills Row (All, Live, Upcoming, Finished) */
@@ -209,27 +205,29 @@
       display: flex;
       gap: 10px;
       overflow-x: auto;
-      padding: 4px 4px 12px;
+      padding: 4px 4px 14px;
       scrollbar-width: none;
     }
     .status-pill {
-      background: #151e2e;
-      color: #fff;
-      border: 1.3px solid #25354d;
+      background: #0F1623;
+      color: #8E9BAE;
+      border: 1.2px solid #1E2C42;
       padding: 8px 18px;
       border-radius: 99px;
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       display: flex;
       align-items: center;
       gap: 6px;
+      transition: all 0.16s;
     }
     .status-pill.active {
-      border-color: var(--cyan);
-      background: #122536;
-      font-weight: 700;
+      border-color: var(--neon);
+      background: rgba(0, 245, 155, 0.15);
+      color: var(--neon);
+      font-weight: 800;
     }
 
     /* Admin Action Bar inside each tab */
@@ -239,24 +237,24 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 10px;
-      margin: 4px 4px 12px;
+      margin: 4px 4px 14px;
     }
     .btn-add {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: #fff;
+      background: linear-gradient(135deg, #00F59B, #00E5FF);
+      color: #04120B;
       border: none;
       padding: 10px 18px;
       border-radius: 12px;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 245, 155, 0.3);
     }
     .btn-secondary {
-      background: #1a2639;
+      background: #141E30;
       color: #fff;
       border: 1px solid var(--border);
       padding: 9px 14px;
@@ -266,51 +264,58 @@
       cursor: pointer;
     }
     .btn-danger {
-      background: rgba(229, 57, 53, 0.16);
-      color: #ff6b6b;
-      border: 1px solid rgba(229, 57, 53, 0.4);
-      padding: 5px 10px;
-      border-radius: 8px;
+      background: rgba(255, 46, 84, 0.16);
+      color: #ff6b81;
+      border: 1px solid rgba(255, 46, 84, 0.45);
+      padding: 6px 11px;
+      border-radius: 9px;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
     }
     .btn-edit {
-      background: rgba(59, 130, 246, 0.16);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      padding: 5px 10px;
-      border-radius: 8px;
+      background: rgba(0, 229, 255, 0.14);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      padding: 6px 11px;
+      border-radius: 9px;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
     }
 
-    /* Match & Highlight Card matching Screenshot 100% */
+    /* 3D Stadium Vertical Shield Cards (First Idea UI) */
     .cards-list {
       display: flex;
       flex-direction: column;
-      gap: 11px;
+      gap: 14px;
       padding: 0 2px;
     }
     .match-card {
-      background: var(--surface);
-      border: 1.2px solid var(--border);
-      border-radius: 16px;
-      padding: 12px 15px;
+      background: linear-gradient(180deg, #131D2E 0%, #0C121D 100%);
+      border: 1.3px solid #1E2C42;
+      border-radius: 22px;
+      overflow: hidden;
       cursor: pointer;
-      transition: transform 0.12s, border-color 0.15s;
+      transition: transform 0.15s, border-color 0.18s, box-shadow 0.18s;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    .match-card.live-glow {
+      border-color: rgba(0, 245, 155, 0.55);
     }
     .match-card:hover {
-      border-color: var(--blue);
-      transform: translateY(-1px);
+      border-color: var(--neon);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(0, 245, 155, 0.14);
     }
     .card-top-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
+      padding: 11px 16px;
+      background: #141E30;
+      border-bottom: 1px solid rgba(30, 44, 66, 0.7);
     }
     .card-league-wrap {
       display: flex;
@@ -320,15 +325,16 @@
       flex: 1;
     }
     .card-league-logo {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       object-fit: contain;
       flex-shrink: 0;
     }
     .card-league-title {
-      font-size: 14.5px;
-      font-weight: 500;
-      color: #fff;
+      font-size: 12.5px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      color: var(--cyan);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -338,86 +344,132 @@
       align-items: center;
       gap: 6px;
       flex-shrink: 0;
-      font-size: 13.5px;
+      font-size: 11.5px;
+      background: #0B101A;
+      border: 1px solid #1E2C42;
+      padding: 4px 10px;
+      border-radius: 8px;
     }
     .card-time-blue {
-      color: var(--blue);
-      font-weight: 600;
+      color: var(--gold);
+      font-weight: 800;
     }
     .card-date-white {
-      color: #fff;
-      font-weight: 500;
+      color: #8E9BAE;
+      font-weight: 600;
     }
     .card-teams-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
+      padding: 18px 16px 14px;
     }
     .team-side {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
+      text-align: center;
+      gap: 9px;
       flex: 1;
       min-width: 0;
     }
-    .team-side.right {
-      justify-content: flex-end;
-      text-align: right;
+    .team-shield-box {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #1B2940 0%, #0F1726 100%);
+      border: 1.5px solid #263854;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
     }
     .team-logo {
-      width: 50px;
-      height: 50px;
+      width: 46px;
+      height: 46px;
       object-fit: contain;
-      flex-shrink: 0;
       border-radius: 50%;
-      background: rgba(255,255,255,0.03);
     }
     .team-name {
-      font-size: 16px;
-      font-weight: 500;
-      color: #fff;
-      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 800;
+      color: #F4F8FF;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.25;
     }
     .center-status {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 64px;
-      padding: 0 6px;
+      min-width: 86px;
+      gap: 5px;
     }
-    .vs-text {
-      font-size: 20px;
-      font-weight: 600;
-      color: #fff;
-    }
-    .live-badge-center {
-      color: #ef4444;
-      font-size: 13px;
-      font-weight: 700;
+    .vs-pill-gold {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #172234;
+      border: 1.4px solid rgba(255, 184, 0, 0.55);
       display: flex;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--gold);
+    }
+    .live-badge-center {
+      background: rgba(255, 46, 84, 0.18);
+      border: 1.2px solid var(--red);
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .live-dot {
       width: 7px;
       height: 7px;
-      background: #ef4444;
+      background: var(--red);
       border-radius: 50%;
       display: inline-block;
+      box-shadow: 0 0 8px var(--red);
     }
-    .card-admin-footer {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px dashed rgba(42, 59, 84, 0.7);
+    .card-action-bar {
+      padding: 10px 16px;
+      background: #0A0F18;
+      border-top: 1px solid #1E2C42;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .watch-pill-btn {
+      background: var(--neon);
+      color: #04120B;
       font-size: 11px;
-      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .watch-pill-btn.gold {
+      background: rgba(255, 184, 0, 0.16);
+      border: 1px solid rgba(255, 184, 0, 0.6);
+      color: var(--gold);
     }
 
     /* Categories & Channels Grid */
@@ -429,22 +481,23 @@
     .channel-card {
       background: var(--surface);
       border: 1.2px solid var(--border);
-      border-radius: 16px;
-      padding: 14px;
+      border-radius: 18px;
+      padding: 15px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
       cursor: pointer;
+      transition: border-color 0.15s;
     }
-    .channel-card:hover { border-color: var(--blue); }
+    .channel-card:hover { border-color: var(--neon); }
 
     /* Editor Card / Form */
     .editor-panel {
       display: none;
-      background: #111a2b;
-      border: 1.5px solid var(--blue);
-      border-radius: 18px;
+      background: #0F1623;
+      border: 1.5px solid var(--neon);
+      border-radius: 20px;
       padding: 18px;
       margin-bottom: 16px;
     }
@@ -463,7 +516,7 @@
     }
     .form-group input, .form-group select, .form-group textarea {
       width: 100%;
-      background: #0b111e;
+      background: #070A10;
       border: 1px solid var(--border);
       color: #fff;
       padding: 10px 12px;
@@ -471,104 +524,122 @@
       font-size: 13.5px;
     }
 
-    /* Multiple Streams Available Modal (Exact Match to Screenshot) */
+    /* Slide-Up Glass Bottom Sheet Modal ("STREAM LAUNCHPAD") */
     .modal-backdrop {
       display: none;
       position: fixed;
       inset: 0;
       z-index: 200;
-      background: rgba(4, 8, 16, 0.78);
-      backdrop-filter: blur(5px);
-      align-items: center;
+      background: rgba(4, 7, 13, 0.82);
+      backdrop-filter: blur(7px);
+      align-items: flex-end;
       justify-content: center;
-      padding: 16px;
+      padding: 0;
     }
     .modal-backdrop.open { display: flex; }
     .streams-modal {
       width: 100%;
-      max-width: 420px;
-      background: #141c27;
-      border: 1.3px solid rgba(20, 184, 166, 0.55);
-      border-radius: 26px;
-      padding: 24px 20px 20px;
+      max-width: 540px;
+      background: #0D131F;
+      border-top: 2px solid var(--neon);
+      border-left: 1px solid #1E2C42;
+      border-right: 1px solid #1E2C42;
+      border-radius: 28px 28px 0 0;
+      padding: 18px 20px 26px;
       text-align: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.75);
-      max-height: 90vh;
+      box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.85);
+      max-height: 88vh;
       overflow-y: auto;
+      animation: slideUpSheet 0.22s ease-out;
+    }
+    @keyframes slideUpSheet {
+      from { transform: translateY(100%); opacity: 0.5; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .sheet-drag-handle {
+      width: 48px;
+      height: 5px;
+      border-radius: 99px;
+      background: #2B3B54;
+      margin: 0 auto 14px;
     }
     .modal-signal-circle {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: #122b36;
-      border: 1.5px solid rgba(20, 184, 166, 0.55);
-      margin: 0 auto 16px;
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: rgba(0, 245, 155, 0.14);
+      border: 1.5px solid var(--neon);
+      margin: 0 auto 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #14b8a6;
-      font-size: 28px;
+      color: var(--neon);
+      font-size: 24px;
     }
     .modal-heading {
-      font-size: 20px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 6px;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      color: #F4F8FF;
+      margin-bottom: 4px;
     }
     .modal-sub {
-      font-size: 14px;
-      color: #9ba8b8;
-      margin-bottom: 18px;
+      font-size: 13px;
+      color: #8E9BAE;
+      margin-bottom: 16px;
     }
     .stream-row-btn {
       width: 100%;
-      background: #1b2432;
-      border: 1px solid #2b384b;
-      border-radius: 15px;
+      background: #141E30;
+      border: 1.2px solid rgba(0, 245, 155, 0.35);
+      border-radius: 16px;
       padding: 14px 16px;
-      margin-bottom: 11px;
+      margin-bottom: 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
       color: #fff;
-      transition: border-color 0.15s;
+      transition: all 0.15s;
     }
     .stream-row-btn:hover {
-      border-color: #14b8a6;
+      border-color: var(--neon);
+      background: #18253B;
     }
     .stream-row-left {
       display: flex;
       align-items: center;
-      gap: 14px;
-      font-size: 16px;
-      font-weight: 700;
+      gap: 12px;
+      font-size: 15px;
+      font-weight: 800;
     }
     .fhd-badge {
-      background: #1b3a5c;
-      color: #38bdf8;
-      font-size: 12px;
-      font-weight: 800;
+      background: rgba(0, 245, 155, 0.16);
+      border: 1px solid var(--neon);
+      color: var(--neon);
+      font-size: 11px;
+      font-weight: 900;
       padding: 4px 11px;
       border-radius: 99px;
     }
     .cancel-modal-btn {
       width: 100%;
-      background: #1b2432;
-      border: 1px solid #2b384b;
+      background: #162032;
+      border: 1px solid #26364F;
       border-radius: 15px;
       padding: 13px;
       margin-top: 6px;
-      color: #e2e8f0;
-      font-size: 16px;
-      font-weight: 700;
+      color: #8E9BAE;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
       cursor: pointer;
     }
     .video-preview-box {
       display: none;
       margin: 12px 0;
       background: #000;
-      border-radius: 12px;
+      border-radius: 14px;
       overflow: hidden;
       border: 1px solid var(--border);
     }
@@ -579,7 +650,7 @@
       background: #000;
     }
 
-    /* Floating Bottom Rounded Pill Navigation Bar matching Screenshot */
+    /* Floating Obsidian Neon Pill Navigation Bar */
     .bottom-nav-wrap {
       position: fixed;
       bottom: 10px;
@@ -595,23 +666,23 @@
       pointer-events: auto;
       width: 100%;
       max-width: 620px;
-      height: 72px;
-      background: #151e2e;
-      border: 1px solid #28374e;
-      border-radius: 38px;
-      padding: 4px 6px;
+      height: 70px;
+      background: #0D131F;
+      border: 1.3px solid #1E2C42;
+      border-radius: 26px;
+      padding: 5px 8px;
       display: flex;
       align-items: center;
       justify-content: space-evenly;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.78);
     }
     .nav-tab {
       flex: 1;
-      height: 62px;
-      border-radius: 34px;
-      border: none;
+      height: 58px;
+      border-radius: 20px;
+      border: 1px solid transparent;
       background: transparent;
-      color: #94a3b8;
+      color: #8E9BAE;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -621,20 +692,22 @@
       transition: all 0.16s;
     }
     .nav-tab svg {
-      width: 23px;
-      height: 23px;
+      width: 22px;
+      height: 22px;
       fill: currentColor;
     }
     .nav-tab span {
-      font-size: 11px;
-      font-weight: 500;
+      font-size: 10.5px;
+      font-weight: 600;
     }
     .nav-tab.active {
-      background: #1e2d47;
-      color: var(--blue);
+      background: rgba(0, 245, 155, 0.14);
+      border-color: rgba(0, 245, 155, 0.45);
+      color: var(--neon);
     }
     .nav-tab.active span {
-      font-weight: 700;
+      font-weight: 800;
+      color: #F4F8FF;
     }
   </style>
 </head>
@@ -1147,18 +1220,16 @@
       }
     };
 
-    // SVG Sport Outline Icons matching Android App
-    function getSportSvg(sport) {
-      if (sport === "ALL") {
-        return `<svg width="36" height="36" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.2"><circle cx="24" cy="24" r="18" stroke-dasharray="90 20"/><circle cx="24" cy="24" r="11"/><text x="24" y="27" text-anchor="middle" fill="#fff" stroke="none" font-size="8.5" font-weight="800">ALL</text></svg>`;
-      }
-      if (sport === "FOOTBALL") {
-        return `<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 3.3l1.35-.95a8.014 8.014 0 014.38 3.34l-.39 1.34-1.35.46L13 6.7V5.3zm-3.35-.95L11 5.3v1.4L7.01 9.49l-1.35-.46-.39-1.34a8.014 8.014 0 014.38-3.34zM7.08 17.11l-1.14.1A7.962 7.962 0 014 12c0-.12.01-.23.02-.35l1-.73 1.38.48 1.46 4.34-.78 1.37zm7.42 2.48c-.79.26-1.63.41-2.5.41s-1.71-.15-2.5-.41l-.69-1.49.64-1.1h5.11l.64 1.11-.7 1.48zM14.27 15H9.73l-1.35-4.02L12 8.44l3.63 2.54L14.27 15zm3.79 2.21l-1.14-.1-.79-1.37 1.46-4.34 1.39-.47 1 .73c.01.11.02.22.02.34 0 1.99-.73 3.81-1.94 5.21z"/></svg>`;
-      }
-      if (sport === "CRICKET") {
-        return `<svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.3"><line x1="16" y1="15" x2="14" y2="40"/><line x1="24" y1="15" x2="24" y2="40"/><line x1="32" y1="15" x2="35" y2="40"/><circle cx="22" cy="23" r="5" fill="#151e2e" stroke="#fff" stroke-width="2.2"/><line x1="15" y1="10" x2="22" y2="8"/><line x1="27" y1="8" x2="34" y2="11"/></svg>`;
-      }
-      return `<svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2"/><path d="M5 12h14M12 5v14" stroke="#fff" stroke-width="2"/></svg>`;
+    // Sport Emoji for Neon Capsule Pills matching Android App
+    function getSportEmoji(sport, isHighlights) {
+      if (sport === "ALL") return isHighlights ? "🎬" : "🔥";
+      if (sport === "CRICKET") return "🏏";
+      if (sport === "FOOTBALL") return "⚽";
+      if (sport === "TENNIS") return "🎾";
+      if (sport === "BOXING") return "🥊";
+      if (sport === "BASKETBALL") return "🏀";
+      if (sport === "RACING") return "🏎️";
+      return "🏆";
     }
 
     function renderSportFilters(itemsList, isHighlights) {
@@ -1185,12 +1256,10 @@
 
       const row = document.getElementById("sportFilterRow");
       row.innerHTML = order.map(s => `
-        <div class="sport-circle-item ${selectedSport === s.key ? "active" : ""}" onclick="selectSport('${s.key}')">
-          <div class="sport-circle-box">
-            ${getSportSvg(s.key)}
-            <span class="sport-badge">${counts[s.key] || 0}</span>
-          </div>
-          <span class="sport-circle-label">${s.label}</span>
+        <div class="sport-capsule-item ${selectedSport === s.key ? "active" : ""}" onclick="selectSport('${s.key}')">
+          <span class="sport-capsule-emoji">${getSportEmoji(s.key, isHighlights)}</span>
+          <span class="sport-capsule-label">${s.label}</span>
+          <span class="sport-badge">${counts[s.key] || 0}</span>
         </div>
       `).join("");
     }
@@ -1258,18 +1327,18 @@
           { k: "FINISHED", l: `Finished (${finCnt})` }
         ].map(p => `
           <button class="status-pill ${selectedStatus === p.k ? "active" : ""}" onclick="selectStatus('${p.k}')">
-            ${selectedStatus === p.k ? "✓ " : ""}${p.l}
+            ${selectedStatus === p.k ? "● " : ""}${p.l}
           </button>
         `).join("");
 
         const finalMatches = sportFiltered.filter(m => selectedStatus === "ALL" || m.status === selectedStatus);
         const container = document.getElementById("liveMatchesContainer");
         container.innerHTML = finalMatches.map(m => `
-          <div class="match-card" onclick="openItemStreamsModal('match', '${m.id}')">
+          <div class="match-card ${m.status === "LIVE" ? "live-glow" : ""}" onclick="openItemStreamsModal('match', '${m.id}')">
             <div class="card-top-row">
               <div class="card-league-wrap">
                 ${m.eventLogo ? `<img class="card-league-logo" src="${m.eventLogo}" onerror="this.style.display='none'"/>` : ""}
-                <span class="card-league-title">${m.tournament}</span>
+                <span class="card-league-title">${(m.tournament || "TOURNAMENT").toUpperCase()}</span>
               </div>
               <div class="card-datetime">
                 <span class="card-time-blue">${m.timeText || ""}</span>
@@ -1278,25 +1347,34 @@
             </div>
             <div class="card-teams-row">
               <div class="team-side">
-                <img class="team-logo" src="${m.team1FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                <div class="team-shield-box">
+                  <img class="team-logo" src="${m.team1FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                </div>
                 <span class="team-name">${m.team1Name}</span>
               </div>
               <div class="center-status">
                 ${m.status === "LIVE"
-                  ? `<div class="live-badge-center"><span class="live-dot"></span>Live</div>`
-                  : `<div class="vs-text">VS</div>`
+                  ? `<div class="live-badge-center"><span class="live-dot"></span>LIVE</div>`
+                  : `<div class="vs-pill-gold">VS</div>`
                 }
               </div>
-              <div class="team-side right">
+              <div class="team-side">
+                <div class="team-shield-box">
+                  <img class="team-logo" src="${m.team2FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
+                </div>
                 <span class="team-name">${m.team2Name}</span>
-                <img class="team-logo" src="${m.team2FlagUrl || m.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
               </div>
             </div>
-            <div class="card-admin-footer" onclick="event.stopPropagation()">
-              <span>ID: ${m.id} • Streams: ${(m.linkNames && m.linkNames.length) ? m.linkNames.join(", ") : ((m.streams || []).length + " configured")}</span>
-              <div style="display:flex;gap:8px;">
-                <button class="btn-edit" onclick="prefillMatchEditor('${m.id}')">Edit / Override Streams</button>
+            <div class="card-action-bar" onclick="event.stopPropagation()">
+              <span style="font-size:11.5px;color:#8E9BAE;font-weight:600;">
+                📡 ${(m.linkNames && m.linkNames.length) ? m.linkNames.join(" • ") : ((m.streams || []).length + " FHD Links")}
+              </span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button class="btn-edit" onclick="prefillMatchEditor('${m.id}')">Edit Links</button>
                 ${m.docId ? `<button class="btn-danger" onclick="window.removeMatch('${m.id}')">Delete</button>` : ""}
+                <span class="watch-pill-btn" onclick="openItemStreamsModal('match', '${m.id}')">
+                  ▶ ${m.status === "LIVE" ? "WATCH LIVE" : "SERVERS"}
+                </span>
               </div>
             </div>
           </div>
@@ -1315,7 +1393,7 @@
             <div class="card-top-row">
               <div class="card-league-wrap">
                 ${h.eventLogo ? `<img class="card-league-logo" src="${h.eventLogo}" onerror="this.style.display='none'"/>` : ""}
-                <span class="card-league-title">${h.categoryLabel || "Football"} | ${h.tournament}</span>
+                <span class="card-league-title">${((h.categoryLabel || "Football") + " • " + (h.tournament || "")).toUpperCase()}</span>
               </div>
               <div class="card-datetime">
                 <span class="card-time-blue">${h.timeText || ""}</span>
@@ -1324,21 +1402,30 @@
             </div>
             <div class="card-teams-row">
               <div class="team-side">
-                <img class="team-logo" src="${h.team1Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                <div class="team-shield-box">
+                  <img class="team-logo" src="${h.team1Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T1'"/>
+                </div>
                 <span class="team-name">${h.team1Name}</span>
               </div>
               <div class="center-status">
-                <div class="vs-text">VS</div>
+                <div class="vs-pill-gold">VS</div>
               </div>
-              <div class="team-side right">
+              <div class="team-side">
+                <div class="team-shield-box">
+                  <img class="team-logo" src="${h.team2Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
+                </div>
                 <span class="team-name">${h.team2Name}</span>
-                <img class="team-logo" src="${h.team2Logo || h.eventLogo || ""}" onerror="this.src='https://via.placeholder.com/50/1e2d47/ffffff?text=T2'"/>
               </div>
             </div>
-            <div class="card-admin-footer" onclick="event.stopPropagation()">
-              <span>Highlight ID: ${h.id} • Links: ${(h.linkNames && h.linkNames.length) ? h.linkNames.join(", ") : "Ready"}</span>
-              <div style="display:flex;gap:8px;">
+            <div class="card-action-bar" onclick="event.stopPropagation()">
+              <span style="font-size:11.5px;color:#8E9BAE;font-weight:600;">
+                🎬 FULL MATCH HIGHLIGHTS • FHD
+              </span>
+              <div style="display:flex;align-items:center;gap:8px;">
                 ${h.docId ? `<button class="btn-danger" onclick="window.removeHighlight('${h.id}')">Delete</button>` : ""}
+                <span class="watch-pill-btn gold" onclick="openItemStreamsModal('highlight', '${h.id}')">
+                  ▶ WATCH RECAP
+                </span>
               </div>
             </div>
           </div>

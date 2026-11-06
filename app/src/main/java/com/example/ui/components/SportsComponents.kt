@@ -69,130 +69,191 @@ fun TopSportsBar(
     onCloseSearch: () -> Unit = {}
 ) {
     Surface(
-        color = Color(0xFF0B111E),
+        color = NavyDark,
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
-        if (isSearching) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (isSearching) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .testTag("search_input"),
-                    placeholder = {
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("search_input"),
+                        placeholder = {
+                            Text(
+                                "Search matches, leagues, channels...",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = CyanAccent,
+                            unfocusedBorderColor = NavyBorder,
+                            focusedContainerColor = NavySurface,
+                            unfocusedContainerColor = NavySurface
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = CyanAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = onCloseSearch) {
+                                Icon(Icons.Default.Close, contentDescription = "Close search", tint = TextSecondary)
+                            }
+                        }
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Glowing Neon Accent Pill Bar
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp)
+                                .height(22.dp)
+                                .clip(RoundedCornerShape(99.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(CyanAccent, SkyBlue)
+                                    )
+                                )
+                        )
                         Text(
-                            "Search matches, leagues, channels...",
-                            color = TextSecondary,
-                            fontSize = 13.sp
+                            text = title.ifBlank { "PLAYLIVE" },
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                letterSpacing = 0.6.sp
+                            )
                         )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedBorderColor = CyanAccent,
-                        unfocusedBorderColor = NavyBorder,
-                        focusedContainerColor = NavySurface,
-                        unfocusedContainerColor = NavySurface
-                    ),
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = CyanAccent,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = onCloseSearch) {
-                            Icon(Icons.Default.Close, contentDescription = "Close search", tint = TextSecondary)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(CyanAccent.copy(alpha = 0.14f))
+                                .border(1.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "PRO",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = CyanAccent,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 9.sp,
+                                    letterSpacing = 0.8.sp
+                                )
+                            )
                         }
                     }
-                )
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = title.ifBlank { "PLAYLIVE" },
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 23.sp,
-                        letterSpacing = 0.2.sp
-                    )
-                )
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    // Favourites Star icon button (matching reference header screenshot)
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onFavouritesClick)
-                            .testTag("favourites_header_button"),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = "Favourites",
-                            tint = if (isFavouritesActive) Color(0xFFF5B301) else Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        // Favourites Star Glass Button
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isFavouritesActive) GoldYellow.copy(alpha = 0.16f) else NavySurface)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isFavouritesActive) GoldYellow else NavyBorder,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable(onClick = onFavouritesClick)
+                                .testTag("favourites_header_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = "Favourites",
+                                tint = if (isFavouritesActive) GoldYellow else Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    // Compact Refresh icon button
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onRefreshClick)
-                            .testTag("refresh_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        // Refresh Glass Button
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(NavySurface)
+                                .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+                                .clickable(onClick = onRefreshClick)
+                                .testTag("refresh_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                tint = CyanAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    // Compact Search icon button
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onSearchClick)
-                            .testTag("search_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        // Search Glass Button
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(NavySurface)
+                                .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+                                .clickable(onClick = onSearchClick)
+                                .testTag("search_button"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                CyanAccent.copy(alpha = 0.35f),
+                                SkyBlue.copy(alpha = 0.25f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
         }
     }
 }
@@ -219,16 +280,22 @@ fun BottomSportsNavBar(
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Surface(
-            color = Color(0xFF151E2E),
-            shape = RoundedCornerShape(38.dp),
-            tonalElevation = 10.dp,
+            color = Color(0xFF0C121E),
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 12.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
+                .height(70.dp)
                 .border(
-                    width = 1.dp,
-                    color = Color(0xFF28374E),
-                    shape = RoundedCornerShape(38.dp)
+                    width = 1.2.dp,
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF1F2E47),
+                            CyanAccent.copy(alpha = 0.45f),
+                            Color(0xFF1F2E47)
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
                 )
         ) {
             Row(
@@ -240,18 +307,37 @@ fun BottomSportsNavBar(
             ) {
                 visibleTabs.forEach { tab ->
                     val isSelected = tab == selectedTab
-                    val activeBlue = Color(0xFF3B82F6)
-                    val inactiveGrey = Color(0xFF94A3B8)
+                    val activeNeon = CyanAccent
+                    val inactiveGrey = Color(0xFF8A99AD)
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .padding(vertical = 4.dp, horizontal = 2.dp)
-                            .clip(RoundedCornerShape(34.dp))
+                            .padding(vertical = 5.dp, horizontal = 3.dp)
+                            .clip(RoundedCornerShape(22.dp))
                             .background(
-                                if (isSelected) Color(0xFF1E2D47)
-                                else Color.Transparent
+                                if (isSelected) {
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            CyanAccent.copy(alpha = 0.18f),
+                                            SkyBlue.copy(alpha = 0.08f)
+                                        )
+                                    )
+                                } else {
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Transparent)
+                                    )
+                                }
+                            )
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(
+                                        width = 1.dp,
+                                        color = CyanAccent.copy(alpha = 0.45f),
+                                        shape = RoundedCornerShape(22.dp)
+                                    )
+                                } else Modifier
                             )
                             .clickable { onTabSelected(tab) }
                             .testTag("nav_tab_${tab.name.lowercase()}"),
@@ -264,16 +350,16 @@ fun BottomSportsNavBar(
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = tab.label,
-                                tint = if (isSelected) activeBlue else inactiveGrey,
-                                modifier = Modifier.size(24.dp)
+                                tint = if (isSelected) activeNeon else inactiveGrey,
+                                modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = tab.label,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) activeBlue else inactiveGrey,
-                                    fontSize = 11.sp
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else inactiveGrey,
+                                    fontSize = 10.5.sp
                                 ),
                                 maxLines = 1
                             )
@@ -619,63 +705,116 @@ fun MatchCard(
         match.team2Name.ifBlank { team2Visual.countryName }.ifBlank { match.team2Code }
     }
 
+    val isLive = match.status == MatchStatus.LIVE
+    val cardBorderBrush = remember(isLive) {
+        if (isLive) {
+            Brush.linearGradient(
+                colors = listOf(
+                    LiveRed.copy(alpha = 0.85f),
+                    CyanAccent.copy(alpha = 0.55f),
+                    LiveRed.copy(alpha = 0.65f)
+                )
+            )
+        } else {
+            Brush.linearGradient(
+                colors = listOf(
+                    CyanAccent.copy(alpha = 0.40f),
+                    Color(0xFF1F2D46),
+                    SkyBlue.copy(alpha = 0.30f)
+                )
+            )
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
             .border(
-                width = 1.2.dp,
-                color = Color(0xFF243247),
-                shape = RoundedCornerShape(14.dp)
+                width = if (isLive) 1.6.dp else 1.2.dp,
+                brush = cardBorderBrush,
+                shape = RoundedCornerShape(22.dp)
             )
             .testTag("match_card_${match.id}"),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF131B2A))
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C121E))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF141F33),
+                            Color(0xFF090E17)
+                        )
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            // 1. Top Row: Square Sport Badge + Uppercase Tournament Header + Favourite Toggle
+            // 1. Top Bar: Sport Neon Pill + Tournament Name + Favourite Star
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SportHeaderSquareBadge(sport = match.sport, tournament = formattedHeader)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF0A0F1A))
+                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(if (isLive) LiveRed else CyanAccent)
+                    )
+                    Spacer(modifier = Modifier.width(7.dp))
+                    Text(
+                        text = formattedHeader,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFE2E8F0),
+                            fontSize = 11.5.sp,
+                            letterSpacing = 0.5.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = formattedHeader,
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 13.5.sp,
-                        letterSpacing = 0.2.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+
                 IconButton(
                     onClick = onFavoriteToggle,
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (match.isFavorite) GoldYellow.copy(alpha = 0.18f) else Color(0xFF131D2E))
+                        .border(
+                            1.dp,
+                            if (match.isFavorite) GoldYellow.copy(alpha = 0.6f) else Color(0xFF23324D),
+                            RoundedCornerShape(10.dp)
+                        )
                         .testTag("fav_toggle_${match.id}")
                 ) {
                     Icon(
                         imageVector = if (match.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
                         contentDescription = if (match.isFavorite) "Remove from Favourites" else "Add to Favourites",
                         tint = if (match.isFavorite) GoldYellow else TextSecondary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Middle Row: Strictly Team 1 Logo/Flag + Name | Center Status/Kickoff | Team 2 Name + Logo/Flag
-            // Never displays any score or score badge on the card.
+            // 2. 3D Stadium Arena Row: Vertical Team 1 Shield | Center Arena VS/LIVE | Vertical Team 2 Shield
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -683,9 +822,9 @@ fun MatchCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left Team: Logo/Flag + Name ONLY
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                // Team 1 Column (Shield + Name Underneath)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
                     TeamFlagBadge(
@@ -695,73 +834,116 @@ fun MatchCard(
                         teamName = match.team1Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = team1Display,
                         style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 14.5.sp
+                            fontSize = 14.sp
                         ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
                     )
                 }
 
-                // Center: Live indicator OR Upcoming Kickoff Time & Date OR Finished OR Unknown
+                // Center Stadium Hub
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(horizontal = 10.dp)
                 ) {
                     when (match.status) {
                         MatchStatus.LIVE -> {
-                            Box(
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF471D26))
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(LiveRed.copy(alpha = 0.20f))
+                                    .border(1.2.dp, LiveRed, RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .clip(CircleShape)
+                                        .background(LiveRed)
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text(
+                                    text = "LIVE",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Live",
+                                text = liveTimerFormatted,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFD9383A),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = CyanAccent,
                                     fontSize = 13.sp
                                 )
                             )
                         }
                         MatchStatus.UPCOMING -> {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(GoldYellow.copy(alpha = 0.14f))
+                                    .border(1.dp, GoldYellow.copy(alpha = 0.55f), RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 11.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "VS",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = GoldYellow,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = upcomingTimeText,
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontSize = 13.5.sp
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = CyanAccent,
+                                    fontSize = 12.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
                                 text = upcomingDateText,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF00B8D4),
-                                    fontSize = 12.sp
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 11.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
                         }
                         MatchStatus.FINISHED -> {
-                            Text(
-                                text = "Finished",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 13.sp
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(Color(0xFF1E293B))
+                                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "FINISHED",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 10.sp
+                                    )
                                 )
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = upcomingDateText,
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -773,11 +955,11 @@ fun MatchCard(
                         }
                         MatchStatus.UNKNOWN -> {
                             Text(
-                                text = "অনির্ধারিত",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
+                                text = "VS",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = GoldYellow,
-                                    fontSize = 12.5.sp
+                                    fontSize = 16.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -785,25 +967,11 @@ fun MatchCard(
                     }
                 }
 
-                // Right Team: Name + Logo/Flag ONLY
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
+                // Team 2 Column (Shield + Name Underneath)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = team2Display,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 14.5.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
                     TeamFlagBadge(
                         flagUrl = team2Visual.flagUrl,
                         emoji = team2Visual.emoji,
@@ -811,25 +979,87 @@ fun MatchCard(
                         teamName = match.team2Name,
                         isNationalTeam = match.isNationalTeam
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = team2Display,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            fontSize = 14.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 3. Bottom Centered Elapsed Timer / Starts In Countdown / Status
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+            // 3. Bottom Action Dock: Countdown/Status Pill on Left + Glowing "Watch Live FHD" Button on Right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF080C14))
+                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = bottomStatusText,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 14.sp
-                    ),
-                    textAlign = TextAlign.Center
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isLive) Icons.Default.Sensors else Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = if (isLive) LiveRed else SkyBlue,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isLive) "Live Broadcast Active" else bottomStatusText,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLive) Color(0xFFE2E8F0) else TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(
+                            if (isLive) {
+                                Brush.horizontalGradient(colors = listOf(CyanAccent, SkyBlue))
+                            } else {
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        CyanAccent.copy(alpha = 0.18f),
+                                        SkyBlue.copy(alpha = 0.18f)
+                                    )
+                                )
+                            }
+                        )
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = if (isLive) Color(0xFF070A10) else CyanAccent,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isLive) "WATCH LIVE" else "SERVERS",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isLive) Color(0xFF070A10) else CyanAccent,
+                            fontSize = 10.5.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
             }
         }
     }
@@ -877,15 +1107,17 @@ fun TeamFlagBadge(
     if (isMotoGp && resolved.flagUrl.isBlank()) {
         Box(
             modifier = Modifier
-                .width(46.dp)
-                .height(36.dp),
+                .size(54.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF141F33))
+                .border(1.2.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "MGP",
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
+                    color = CyanAccent,
                     fontSize = 14.sp,
                     letterSpacing = (-0.5).sp
                 )
@@ -920,26 +1152,32 @@ fun TeamFlagBadge(
 
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1C2739))
+                .size(54.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color(0xFF1E2F4D), Color(0xFF0E1624))
+                    )
+                )
                 .border(
-                    width = 1.dp,
-                    color = if (!effectiveIsNational) Color(0xFF2D3F5B) else Color(0xFF2A3B56),
-                    shape = CircleShape
+                    width = 1.3.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(CyanAccent.copy(alpha = 0.50f), SkyBlue.copy(alpha = 0.25f))
+                    ),
+                    shape = RoundedCornerShape(18.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             if (!hasRemoteUrl) {
                 if (effectiveIsNational && resolved.emoji.isNotBlank() && resolved.emoji != "🏳️") {
-                    Text(text = resolved.emoji, fontSize = 22.sp)
+                    Text(text = resolved.emoji, fontSize = 24.sp)
                 } else {
                     Text(
                         text = resolved.code.take(3).uppercase(),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = CyanAccent,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                     )
                 }
@@ -959,8 +1197,8 @@ fun TeamFlagBadge(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(if (effectiveIsNational) 0.dp else 4.dp)
-                        .clip(if (effectiveIsNational) CircleShape else RoundedCornerShape(4.dp))
+                        .padding(if (effectiveIsNational) 0.dp else 5.dp)
+                        .clip(RoundedCornerShape(16.dp))
                 )
             }
         }
@@ -1024,6 +1262,7 @@ fun FinishedBadge() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultipleStreamsModalDialog(
     streams: List<StreamSource>,
@@ -1040,7 +1279,6 @@ fun MultipleStreamsModalDialog(
     onStreamSelected: (StreamSource) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Only display enabled & authorized stream sources in priority order (never expose raw stream URLs or .txt pointers)
     val enabledStreams = remember(streams) {
         streams
             .filter { s ->
@@ -1057,188 +1295,192 @@ fun MultipleStreamsModalDialog(
             )
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color(0xFF0A0F1A),
+        scrimColor = Color.Black.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .width(48.dp)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(
+                        Brush.horizontalGradient(colors = listOf(CyanAccent, SkyBlue))
+                    )
+            )
+        }
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 16.dp)
-                .border(1.2.dp, Color(0xFF0E7490), RoundedCornerShape(22.dp)),
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF131A26))
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Broadcast Waves Icon in Circular Badge
-                Box(
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF162736))
-                        .border(1.dp, Color(0xFF1E4E68), CircleShape),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        Icons.Default.Sensors,
-                        contentDescription = null,
-                        tint = Color(0xFF00BCD4),
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Multiple Streams Available",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 20.sp
-                    ),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Choose your preferred stream",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFF8A99AD),
-                        fontSize = 14.sp
-                    ),
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                if (isLoadingStreams && enabledStreams.isEmpty()) {
-                    Surface(
-                        color = Color(0xFF1A2232),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(18.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = Color(0xFF00D8FF),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Loading match streams...",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8))
-                            )
-                        }
-                    }
-                } else if (enabledStreams.isEmpty()) {
-                    Surface(
-                        color = Color(0xFF1A2232),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "No active stream sources are currently enabled for this match.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(18.dp)
-                        )
-                    }
-                } else {
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 310.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        enabledStreams.forEach { stream ->
-                            val isSelected = currentSelectedStream?.id == stream.id
-                            StreamItemButton(
-                                stream = stream,
-                                isSelected = isSelected,
-                                onClick = {
-                                    onStreamSelected(stream)
-                                    onDismiss()
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Optional Approved Highlight button (only shown when an approved playable link exists)
-                if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            onWatchHighlight(approvedHighlightUrl)
-                            onDismiss()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .testTag("watch_highlight_button"),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GoldYellow.copy(alpha = 0.2f),
-                            contentColor = GoldYellow
-                        )
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(CyanAccent.copy(alpha = 0.14f))
+                            .border(1.2.dp, CyanAccent.copy(alpha = 0.65f), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.PlayCircle,
-                            contentDescription = "Watch Highlight",
-                            modifier = Modifier.size(18.dp)
+                            Icons.Default.Sensors,
+                            contentDescription = null,
+                            tint = CyanAccent,
+                            modifier = Modifier.size(24.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
                         Text(
-                            text = "Watch Official Highlight",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            text = "STREAM LAUNCHPAD",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                letterSpacing = 0.6.sp
+                            )
+                        )
+                        Text(
+                            text = matchTitle?.takeIf { it.isNotBlank() } ?: "Select a high-speed FHD server",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = CyanAccent,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.5.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Cancel button matching reference APK
-                Surface(
+                IconButton(
+                    onClick = onDismiss,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, Color(0xFF28354A), RoundedCornerShape(16.dp))
-                        .clickable(onClick = onDismiss),
-                    color = Color(0xFF1A2232),
-                    shape = RoundedCornerShape(16.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF151F32))
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isLoadingStreams && enabledStreams.isEmpty()) {
+                Surface(
+                    color = Color(0xFF121B2B),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Cancel",
-                            modifier = Modifier.size(18.dp),
-                            tint = Color(0xFF94A3B8)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = CyanAccent,
+                            strokeWidth = 2.2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Cancel",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF94A3B8),
-                                fontSize = 16.sp
+                            text = "Decrypting live FHD servers...",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
                             )
+                        )
+                    }
+                }
+            } else if (enabledStreams.isEmpty()) {
+                Surface(
+                    color = Color(0xFF121B2B),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "No active stream servers are currently online for this event.",
+                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 340.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    enabledStreams.forEach { stream ->
+                        val isSelected = currentSelectedStream?.id == stream.id
+                        StreamItemButton(
+                            stream = stream,
+                            isSelected = isSelected,
+                            onClick = {
+                                onStreamSelected(stream)
+                                onDismiss()
+                            }
                         )
                     }
                 }
             }
+
+            if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        onWatchHighlight(approvedHighlightUrl)
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .testTag("watch_highlight_button"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GoldYellow.copy(alpha = 0.2f),
+                        contentColor = GoldYellow
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.PlayCircle,
+                        contentDescription = "Watch Highlight",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Watch Official Highlight",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
@@ -1253,10 +1495,14 @@ fun StreamItemButton(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0xFF28354A), RoundedCornerShape(16.dp))
+            .border(
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) CyanAccent else Color(0xFF24344E),
+                shape = RoundedCornerShape(16.dp)
+            )
             .clickable(onClick = onClick)
             .testTag("stream_option_${stream.name.lowercase().replace(" ", "_")}"),
-        color = Color(0xFF1A2232),
+        color = Color(0xFF141F33),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -1270,28 +1516,44 @@ fun StreamItemButton(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    Icons.Default.FormatListBulleted,
-                    contentDescription = null,
-                    tint = Color(0xFF00D8FF),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(14.dp))
-                Text(
-                    text = stream.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                        fontSize = 15.5.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CyanAccent.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = CyanAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = stream.name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            fontSize = 15.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Instant Direct Server • Low Latency",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = TextSecondary,
+                            fontSize = 10.5.sp
+                        )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Quality Badge (FHD, HD, SD)
             QualityBadge(quality = stream.quality)
         }
     }
@@ -1308,15 +1570,16 @@ fun QualityBadge(quality: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(Color(0xFF11384A))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .background(CyanAccent.copy(alpha = 0.16f))
+            .border(1.dp, CyanAccent.copy(alpha = 0.55f), RoundedCornerShape(50))
+            .padding(horizontal = 11.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = Color(0xFF00D8FF),
-                fontWeight = FontWeight.Bold,
+                color = CyanAccent,
+                fontWeight = FontWeight.ExtraBold,
                 fontSize = 11.sp
             )
         )

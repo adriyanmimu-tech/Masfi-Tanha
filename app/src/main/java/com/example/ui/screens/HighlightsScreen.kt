@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -14,8 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SportsCricket
-import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,9 +37,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.HighlightItem
 import com.example.data.model.SportType
-import com.example.ui.theme.CyanAccent
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.*
 
 @Composable
 fun HighlightsScreen(
@@ -77,18 +76,18 @@ fun HighlightsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B111E))
+            .background(NavyDark)
     ) {
-        // Circular Sport Filter Row matching the Highlights screenshot (All 95, Football 91, Cricket 4)
+        // Modern Neon Capsule Sport Filter Bar for Highlights
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HighlightSportCircleItem(
+            HighlightSportCapsuleItem(
                 sportType = SportType.ALL,
                 label = "All",
                 badgeCount = totalCount,
@@ -97,7 +96,7 @@ fun HighlightsScreen(
             )
 
             if (footballCount > 0 || totalCount == 0) {
-                HighlightSportCircleItem(
+                HighlightSportCapsuleItem(
                     sportType = SportType.FOOTBALL,
                     label = "Football",
                     badgeCount = footballCount,
@@ -109,7 +108,7 @@ fun HighlightsScreen(
             }
 
             if (cricketCount > 0 || totalCount == 0) {
-                HighlightSportCircleItem(
+                HighlightSportCapsuleItem(
                     sportType = SportType.CRICKET,
                     label = "Cricket",
                     badgeCount = cricketCount,
@@ -121,7 +120,7 @@ fun HighlightsScreen(
             }
 
             if (boxingCount > 0) {
-                HighlightSportCircleItem(
+                HighlightSportCapsuleItem(
                     sportType = SportType.BOXING,
                     label = "Boxing",
                     badgeCount = boxingCount,
@@ -133,7 +132,7 @@ fun HighlightsScreen(
             }
 
             if (basketballCount > 0) {
-                HighlightSportCircleItem(
+                HighlightSportCapsuleItem(
                     sportType = SportType.BASKETBALL,
                     label = "Basketball",
                     badgeCount = basketballCount,
@@ -145,7 +144,7 @@ fun HighlightsScreen(
             }
 
             if (racingCount > 0) {
-                HighlightSportCircleItem(
+                HighlightSportCapsuleItem(
                     sportType = SportType.RACING,
                     label = "Motorsport",
                     badgeCount = racingCount,
@@ -191,9 +190,9 @@ fun HighlightsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp),
-                contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 12.dp),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 98.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(
                     items = filteredHighlights,
@@ -210,93 +209,76 @@ fun HighlightsScreen(
 }
 
 @Composable
-private fun HighlightSportCircleItem(
+private fun HighlightSportCapsuleItem(
     sportType: SportType,
     label: String,
     badgeCount: Int,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .testTag("highlight_sport_${label.lowercase()}")
-    ) {
-        Box(
-            modifier = Modifier.size(68.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF151E2E))
-                    .then(
-                        if (isSelected) {
-                            Modifier.border(
-                                width = 2.2.dp,
-                                brush = Brush.linearGradient(
-                                    colors = listOf(Color(0xFF3B82F6), Color(0xFF2563EB))
-                                ),
-                                shape = CircleShape
-                            )
-                        } else {
-                            Modifier.border(
-                                width = 1.dp,
-                                color = Color(0xFF223044),
-                                shape = CircleShape
-                            )
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                when (sportType) {
-                    SportType.ALL -> AllSportOutlineIcon()
-                    SportType.FOOTBALL -> FootballOutlineIcon()
-                    SportType.CRICKET -> CricketOutlineIcon()
-                    SportType.BOXING -> BoxingOutlineIcon()
-                    SportType.BASKETBALL -> BasketballOutlineIcon()
-                    SportType.RACING -> RacingCarOutlineIcon()
-                    else -> AllSportOutlineIcon()
-                }
-            }
+    val emoji = when (sportType) {
+        SportType.ALL -> "🎬"
+        SportType.FOOTBALL -> "⚽"
+        SportType.CRICKET -> "🏏"
+        SportType.BOXING -> "🥊"
+        SportType.BASKETBALL -> "🏀"
+        SportType.RACING -> "🏎️"
+        else -> "⚡"
+    }
 
-            // Red count badge on top-right matching the Highlights screenshot
+    Box(
+        modifier = Modifier
+            .height(44.dp)
+            .animateContentSize()
+            .clip(RoundedCornerShape(99.dp))
+            .background(
+                if (isSelected) {
+                    Brush.horizontalGradient(colors = listOf(CyanAccent, SkyBlue))
+                } else {
+                    Brush.horizontalGradient(colors = listOf(Color(0xFF111A2B), Color(0xFF111A2B)))
+                }
+            )
+            .border(
+                width = 1.2.dp,
+                color = if (isSelected) CyanAccent else Color(0xFF22324C),
+                shape = RoundedCornerShape(99.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .testTag("highlight_sport_${label.lowercase()}"),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(text = emoji, fontSize = 15.sp)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = if (isSelected) Color(0xFF070A10) else Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 13.5.sp
+                ),
+                maxLines = 1
+            )
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-2).dp, y = 2.dp)
-                    .defaultMinSize(minWidth = 22.dp, minHeight = 22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE53935))
-                    .border(1.4.dp, Color.White, CircleShape)
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(if (isSelected) Color(0xFF070A10).copy(alpha = 0.22f) else LiveRed)
+                    .padding(horizontal = 7.dp, vertical = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = badgeCount.toString(),
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color.White,
+                        color = if (isSelected) Color(0xFF070A10) else Color.White,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 10.sp
-                    ),
-                    maxLines = 1
+                    )
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = Color.White,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                fontSize = 13.sp
-            ),
-            maxLines = 1
-        )
     }
 }
 
@@ -324,26 +306,40 @@ private fun HighlightMatchCard(
         }
     }
 
-    Surface(
-        color = Color(0xFF151F30),
-        shape = RoundedCornerShape(16.dp),
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = 1.2.dp,
-                color = Color(0xFF2A3B54),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .testTag("highlight_card_${item.id}")
+            .border(
+                width = 1.3.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        GoldYellow.copy(alpha = 0.55f),
+                        CyanAccent.copy(alpha = 0.35f),
+                        Color(0xFF1F2E47)
+                    )
+                ),
+                shape = RoundedCornerShape(22.dp)
+            )
+            .testTag("highlight_card_${item.id}"),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C121E))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF141F33),
+                            Color(0xFF090E17)
+                        )
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            // Top Header Row: Event Logo + "Football | UEFA Europa League" on Left, "02:00 AM 06/11/2026" on Right
+            // 1. Top Bar: League Pill on Left + Time/Date Pill on Right
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -351,7 +347,12 @@ private fun HighlightMatchCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF0A0F1A))
+                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     if (item.eventLogo.isNotBlank()) {
                         SubcomposeAsyncImage(
@@ -361,13 +362,13 @@ private fun HighlightMatchCard(
                                 .build(),
                             contentDescription = item.tournament,
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(17.dp),
                             error = {
                                 Icon(
                                     imageVector = if (item.sport == SportType.CRICKET) Icons.Default.SportsCricket else Icons.Default.EmojiEvents,
                                     contentDescription = null,
-                                    tint = Color(0xFFF97316),
-                                    modifier = Modifier.size(18.dp)
+                                    tint = GoldYellow,
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         )
@@ -375,19 +376,19 @@ private fun HighlightMatchCard(
                         Icon(
                             imageVector = if (item.sport == SportType.CRICKET) Icons.Default.SportsCricket else Icons.Default.EmojiEvents,
                             contentDescription = null,
-                            tint = Color(0xFFF97316),
-                            modifier = Modifier.size(18.dp)
+                            tint = GoldYellow,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(7.dp))
 
                     Text(
                         text = headerTitle,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.5.sp
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -396,28 +397,35 @@ private fun HighlightMatchCard(
 
                 if (item.timeText.isNotBlank() || item.dateText.isNotBlank()) {
                     Spacer(modifier = Modifier.width(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Color(0xFF0A0F1A))
+                            .border(1.dp, Color(0xFF1D2C45), RoundedCornerShape(99.dp))
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
                         if (item.timeText.isNotBlank()) {
                             Text(
                                 text = item.timeText,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF3B82F6),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.5.sp
+                                    color = CyanAccent,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
                                 ),
                                 maxLines = 1
                             )
                         }
                         if (item.timeText.isNotBlank() && item.dateText.isNotBlank()) {
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                         }
                         if (item.dateText.isNotBlank()) {
                             Text(
                                 text = item.dateText,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 13.5.sp
+                                    color = Color(0xFFE2E8F0),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp
                                 ),
                                 maxLines = 1
                             )
@@ -426,72 +434,124 @@ private fun HighlightMatchCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Teams Row: Team 1 Crest + Team 1 Name | VS | Team 2 Name + Team 2 Crest
+            // 2. Vertical 3D Stadium Team Shields Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Left Team
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
                 ) {
                     HighlightTeamLogo(
                         logoUrl = item.team1Logo,
                         teamName = team1Display
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = team1Display,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp
                         ),
                         maxLines = 1,
-                        modifier = Modifier
-                            .weight(1f)
-                            .basicMarquee()
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.basicMarquee()
                     )
                 }
 
-                // Center VS
-                Text(
-                    text = "VS",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 20.sp
-                    ),
-                    modifier = Modifier.padding(horizontal = 14.dp)
-                )
-
-                // Right Team
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(GoldYellow.copy(alpha = 0.14f))
+                        .border(1.dp, GoldYellow.copy(alpha = 0.6f), RoundedCornerShape(99.dp))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Text(
+                        text = "VS",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = GoldYellow,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.5.sp
+                        )
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    HighlightTeamLogo(
+                        logoUrl = item.team2Logo,
+                        teamName = team2Display
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = team2Display,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 14.sp
                         ),
                         maxLines = 1,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier
-                            .weight(1f)
-                            .basicMarquee()
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.basicMarquee()
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    HighlightTeamLogo(
-                        logoUrl = item.team2Logo,
-                        teamName = team2Display
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3. Bottom Action Bar: Watch Match Highlights FHD
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF080C14))
+                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "★ Official Match Recap",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = GoldYellow,
+                        fontSize = 11.5.sp
+                    )
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(
+                            Brush.horizontalGradient(colors = listOf(GoldYellow, CyanAccent))
+                        )
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color(0xFF070A10),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "WATCH RECAP",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF070A10),
+                            fontSize = 10.5.sp,
+                            letterSpacing = 0.5.sp
+                        )
                     )
                 }
             }
@@ -515,7 +575,21 @@ private fun HighlightTeamLogo(
     }
 
     Box(
-        modifier = Modifier.size(52.dp),
+        modifier = Modifier
+            .size(54.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFF1E2F4D), Color(0xFF0E1624))
+                )
+            )
+            .border(
+                width = 1.3.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(GoldYellow.copy(alpha = 0.50f), CyanAccent.copy(alpha = 0.30f))
+                ),
+                shape = RoundedCornerShape(18.dp)
+            ),
         contentAlignment = Alignment.Center
     ) {
         if (logoUrl.isNotBlank()) {
@@ -526,7 +600,9 @@ private fun HighlightTeamLogo(
                     .build(),
                 contentDescription = teamName,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(50.dp),
+                modifier = Modifier
+                    .size(46.dp)
+                    .padding(3.dp),
                 error = {
                     FallbackCrestBadge(initials = initials)
                 }
@@ -542,17 +618,17 @@ private fun FallbackCrestBadge(initials: String) {
     Box(
         modifier = Modifier
             .size(48.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF1E2D45))
-            .border(1.5.dp, Color(0xFF3B82F6), CircleShape),
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF162236))
+            .border(1.2.dp, CyanAccent, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = initials,
             style = MaterialTheme.typography.titleSmall.copy(
-                color = Color.White,
+                color = CyanAccent,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = 14.sp
+                fontSize = 13.sp
             )
         )
     }
