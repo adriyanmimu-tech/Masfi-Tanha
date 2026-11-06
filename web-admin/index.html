@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sports Live — Web Admin Control Panel</title>
+  <style>
+    :root {
+      --bg: #0b111e;
+      --card: #131b2a;
+      --border: #243247;
+      --cyan: #00d1c1;
+      --gold: #f5b301;
+      --red: #e53935;
+      --green: #10b981;
+      --text: #ffffff;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1020px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
+    .badge { background: var(--cyan); color: #000; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab-btn { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 99px; cursor: pointer; font-weight: 600; }
+    .tab-btn.active { border-color: var(--cyan); background: #152336; color: var(--cyan); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea { width: 100%; background: #0b111e; border: 1px solid var(--border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+    button.primary { background: var(--cyan); color: #000; border: none; padding: 11px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #1e293b; color: var(--cyan); border: 1px solid var(--cyan); padding: 9px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    button.danger { background: var(--red); color: #fff; border: none; padding: 7px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-top: 10px; gap: 10px; flex-wrap: wrap; }
+    .status-bar { font-size: 13px; color: var(--green); margin-bottom: 14px; font-weight: 600; }
+    .league-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 10px; max-height: 280px; overflow-y: auto; padding: 8px; background: #0b111e; border-radius: 10px; border: 1px solid var(--border); }
+    .league-item { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 6px 8px; background: var(--card); border-radius: 6px; }
+    .league-item input { width: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sports Live <span class="badge">WEBSITE ADMIN PANEL</span></h1>
+    <div id="authArea">
+      <button class="primary" id="loginBtn">Sign in with Google (Admin)</button>
+    </div>
+  </header>
+
+  <div class="status-bar" id="statusBar">Connecting to Firebase Cloud Server...</div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('providers')">ESPN & CREX Provider Sync</button>
+    <button class="tab-btn" onclick="switchTab('matches')">Live & Upcoming Matches</button>
+    <button class="tab-btn" onclick="switchTab('channels')">Channels & Streams</button>
+    <button class="tab-btn" onclick="switchTab('settings')">App Broadcast Settings</button>
+  </div>
+
+  <!-- TAB 0: PROVIDERS (ESPN FOOTBALL & CREX CRICKET) -->
+  <div id="tab-providers">
+    <div class="card">
+      <h3>Provider Sync & Competition Control (ESPN Soccer & CREX International Cricket)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px;">
+        Asia/Dhaka টাইমজোন অনুযায়ী গতকাল, আজ এবং আগামীকালের সিনিয়র আন্তর্জাতিক ও প্রফেশনাল ক্লাব ম্যাচ নিয়ন্ত্রণ করুন।
+      </p>
+      <div class="form-grid">
+        <div>
+          <label>Football Sync (ESPN Scoreboard)</label>
+          <select id="p_football_sync">
+            <option value="true">Enabled (সক্রিয়)</option>
+            <option value="false">Disabled (বন্ধ)</option>
+          </select>
+        </div>
+        <div>
+          <label>Cricket Sync (CREX International)</label>
+          <select id="p_cricket_sync">
+            <option value="true">Enabled (সক্রিয়)</option>
+            <option value="false">Disabled (বন্ধ)</option>
+          </select>
+        </div>
+        <div>
+          <label>Live Auto-Refresh Interval</label>
+          <select id="p_refresh_sec">
+            <option value="15">15 Seconds</option>
+            <option value="25">25 Seconds</option>
+            <option value="30" selected>30 Seconds</option>
+            <option value="60">60 Seconds</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <label style="margin:0;color:var(--cyan);font-weight:700;">Enabled ESPN Senior Football Competitions</label>
+          <div style="display:flex;gap:8px;">
+            <button class="secondary" type="button" onclick="toggleAllLeagues(true)">Select All</button>
+            <button class="secondary" type="button" onclick="toggleCore9Leagues()">Core 9 Only</button>
+          </div>
+        </div>
+        <div class="league-grid" id="leagueCheckboxes"></div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="primary" onclick="saveSettings()">Save Provider & Competition Config</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1: MATCHES -->
+  <div id="tab-matches" style="display:none;">
+    <div class="card">
+      <h3>Add / Update Match & Stream Association (লিভ বা আপকামিং ম্যাচ ও স্ট্রিম)</h3>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px;">কার্ডের মধ্যে শুধুমাত্র দুটি দলের লোগো/পতাকা, নাম, টুর্নামেন্ট, কিকঅফ সময় ও স্ট্যাটাস দেখাবে (কোনো স্কোর দেখানো হবে না)।</p>
+      <div class="form-grid">
+        <div>
+          <label>Provider / Match ID (Unique)</label>
+          <input id="m_id" placeholder="e.g. espn-401654321 or crex-1A2B" />
+        </div>
+        <div>
+          <label>Sport Category</label>
+          <select id="m_sport">
+            <option value="FOOTBALL">FOOTBALL</option>
+            <option value="CRICKET">CRICKET</option>
+          </select>
+        </div>
+        <div>
+          <label>Competition / League Header</label>
+          <input id="m_tournament" placeholder="FOOTBALL • UEFA CHAMPIONS LEAGUE" />
+        </div>
+        <div>
+          <label>Match Status</label>
+          <select id="m_status">
+            <option value="LIVE">LIVE</option>
+            <option value="UPCOMING">UPCOMING</option>
+            <option value="FINISHED">FINISHED</option>
+            <option value="UNKNOWN">UNKNOWN</option>
+          </select>
+        </div>
+        <div>
+          <label>Team Type (Logo vs National Flag)</label>
+          <select id="m_is_national">
+            <option value="false">Club Team (Use Official Club Crest)</option>
+            <option value="true">National Team (Use Country Flag)</option>
+          </select>
+        </div>
+        <div>
+          <label>Kickoff Time & Date (Asia/Dhaka)</label>
+          <input id="m_time" placeholder="Today, 09:00 PM" />
+        </div>
+        <div>
+          <label>Team 1 Full Name</label>
+          <input id="m_t1name" placeholder="Real Madrid" />
+        </div>
+        <div>
+          <label>Team 1 Short Code</label>
+          <input id="m_t1code" placeholder="RMA" />
+        </div>
+        <div>
+          <label>Team 1 Crest / Flag URL</label>
+          <input id="m_t1flag" placeholder="https://a.espncdn.com/i/teamlogos/soccer/500/86.png" />
+        </div>
+        <div>
+          <label>Team 2 Full Name</label>
+          <input id="m_t2name" placeholder="Manchester City" />
+        </div>
+        <div>
+          <label>Team 2 Short Code</label>
+          <input id="m_t2code" placeholder="MCI" />
+        </div>
+        <div>
+          <label>Team 2 Crest / Flag URL</label>
+          <input id="m_t2flag" placeholder="https://a.espncdn.com/i/teamlogos/soccer/500/382.png" />
+        </div>
+        <div>
+          <label>Status / Countdown Text (No Score)</label>
+          <input id="m_timer" placeholder="LIVE NOW or Starts in 2h 15m" />
+        </div>
+        <div>
+          <label>Approved Highlight Video URL (Optional)</label>
+          <input id="m_highlight" placeholder="https://..." />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Primary Stream Server 1 (FHD) — URL, Priority & Status</label>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;">
+            <input id="m_stream1" placeholder="https://..." />
+            <select id="m_stream1_enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+            <input id="m_stream1_priority" type="number" value="0" placeholder="Priority (0=Top)" />
+          </div>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Backup Stream Server 2 (HD) — URL, Priority & Backup Flag</label>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;">
+            <input id="m_stream2" placeholder="https://..." />
+            <select id="m_stream2_enabled">
+              <option value="true">Enabled</option>
+              <option value="false">Disabled</option>
+            </select>
+            <select id="m_stream2_backup">
+              <option value="true">Backup Server</option>
+              <option value="false">Primary Server</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="primary" onclick="saveMatch()">Publish Match & Streams to App Now</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Active Cloud Matches & Stream Overrides (<span id="matchCount">0</span>)</h3>
+      <div id="matchesList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: CHANNELS -->
+  <div id="tab-channels" style="display:none;">
+    <div class="card">
+      <h3>Add / Update Live TV Channel</h3>
+      <div class="form-grid">
+        <div>
+          <label>Channel ID</label>
+          <input id="c_id" placeholder="ch-tsports" />
+        </div>
+        <div>
+          <label>Channel Name</label>
+          <input id="c_name" placeholder="T Sports HD" />
+        </div>
+        <div>
+          <label>Category</label>
+          <input id="c_cat" placeholder="Bangla Sports" />
+        </div>
+        <div>
+          <label>Channel Status</label>
+          <select id="c_enabled">
+            <option value="true">Enabled (Visible in App)</option>
+            <option value="false">Disabled (Hidden)</option>
+          </select>
+        </div>
+        <div>
+          <label>Logo URL (Optional)</label>
+          <input id="c_logo" placeholder="https://..." />
+        </div>
+        <div>
+          <label>Stream Priority Order</label>
+          <input id="c_priority" type="number" value="0" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Stream M3U8 Link</label>
+          <input id="c_url" placeholder="https://..." />
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="primary" onclick="saveChannel()">Publish Channel to App Now</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Active Cloud Channels (<span id="channelCount">0</span>)</h3>
+      <div id="channelsList"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: SETTINGS -->
+  <div id="tab-settings" style="display:none;">
+    <div class="card">
+      <h3>Global App Broadcast Settings</h3>
+      <div class="form-grid">
+        <div>
+          <label>App Title</label>
+          <input id="s_title" value="Sports Live" />
+        </div>
+        <div>
+          <label>Telegram Community Link</label>
+          <input id="s_tg" value="https://t.me/sports_live_streams" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Announcement Banner Message</label>
+          <input id="s_announce" value="Welcome to Sports Live!" />
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="primary" onclick="saveSettings()">Save & Broadcast Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const VERIFIED_LEAGUES = [
+      { id: "uefa.champions", name: "UEFA Champions League" },
+      { id: "fifa.worldq.uefa", name: "FIFA World Cup Qualifiers — UEFA" },
+      { id: "fifa.worldq.conmebol", name: "FIFA World Cup Qualifiers — CONMEBOL" },
+      { id: "uefa.nations", name: "UEFA Nations League" },
+      { id: "eng.1", name: "English Premier League" },
+      { id: "esp.1", name: "La Liga" },
+      { id: "ita.1", name: "Serie A" },
+      { id: "ger.1", name: "Bundesliga" },
+      { id: "fra.1", name: "Ligue 1" },
+      { id: "fifa.world", name: "FIFA World Cup" },
+      { id: "fifa.worldq.concacaf", name: "FIFA WC Qualifiers — CONCACAF" },
+      { id: "fifa.worldq.caf", name: "FIFA WC Qualifiers — CAF" },
+      { id: "fifa.worldq.afc", name: "FIFA WC Qualifiers — AFC" },
+      { id: "fifa.worldq.ofc", name: "FIFA WC Qualifiers — OFC" },
+      { id: "uefa.euro", name: "UEFA European Championship" },
+      { id: "conmebol.america", name: "CONMEBOL Copa America" },
+      { id: "caf.nations", name: "CAF Africa Cup of Nations" },
+      { id: "afc.cup", name: "AFC Asian Cup" },
+      { id: "concacaf.gold", name: "CONCACAF Gold Cup" },
+      { id: "fifa.friendly", name: "International Friendlies" },
+      { id: "uefa.europa", name: "UEFA Europa League" },
+      { id: "uefa.europa.conf", name: "UEFA Conference League" },
+      { id: "conmebol.libertadores", name: "CONMEBOL Libertadores" },
+      { id: "conmebol.sudamericana", name: "CONMEBOL Sudamericana" },
+      { id: "afc.champions", name: "AFC Champions League Elite" },
+      { id: "caf.champions", name: "CAF Champions League" },
+      { id: "concacaf.champions", name: "CONCACAF Champions Cup" },
+      { id: "fifa.cwc", name: "FIFA Club World Cup" },
+      { id: "eng.fa", name: "English FA Cup" },
+      { id: "eng.league_cup", name: "English Carabao Cup" },
+      { id: "esp.copa_del_rey", name: "Spanish Copa del Rey" },
+      { id: "ita.coppa_italia", name: "Coppa Italia" },
+      { id: "ger.dfb_pokal", name: "German DFB-Pokal" },
+      { id: "fra.coupe_de_france", name: "Coupe de France" },
+      { id: "ned.1", name: "Dutch Eredivisie" },
+      { id: "por.1", name: "Portuguese Primeira Liga" },
+      { id: "tur.1", name: "Turkish Super Lig" },
+      { id: "bel.1", name: "Belgian Pro League" },
+      { id: "sco.1", name: "Scottish Premiership" },
+      { id: "bra.1", name: "Brazilian Serie A" },
+      { id: "arg.1", name: "Argentine Liga Profesional" },
+      { id: "usa.1", name: "Major League Soccer (MLS)" },
+      { id: "mex.1", name: "Mexican Liga MX" },
+      { id: "ksa.1", name: "Saudi Pro League" },
+      { id: "jpn.1", name: "Japanese J1 League" },
+      { id: "aus.1", name: "Australian A-League Men" }
+    ];
+
+    const CORE_9 = new Set([
+      "uefa.champions", "fifa.worldq.uefa", "fifa.worldq.conmebol", "uefa.nations",
+      "eng.1", "esp.1", "ita.1", "ger.1", "fra.1"
+    ]);
+
+    const leagueContainer = document.getElementById("leagueCheckboxes");
+    leagueContainer.innerHTML = VERIFIED_LEAGUES.map(l => `
+      <label class="league-item">
+        <input type="checkbox" class="league-cb" value="${l.id}" checked />
+        <span>${l.name} <small style="color:var(--muted);">(${l.id})</small></span>
+      </label>
+    `).join("");
+
+    window.toggleAllLeagues = (checked) => {
+      document.querySelectorAll(".league-cb").forEach(cb => cb.checked = checked);
+    };
+
+    window.toggleCore9Leagues = () => {
+      document.querySelectorAll(".league-cb").forEach(cb => {
+        cb.checked = CORE_9.has(cb.value);
+      });
+    };
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkvGlSNXao8kNEVAAJLug5dwx4aWaZs8g",
+      authDomain: "gen-lang-client-0906457422.firebaseapp.com",
+      projectId: "gen-lang-client-0906457422"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app, "ai-studio-android-newapk-58097b75-65e0-474e-b30f-f9b6469d8bb7");
+
+    let currentUser = null;
+    const createdAtMap = {};
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      const authArea = document.getElementById("authArea");
+      const statusBar = document.getElementById("statusBar");
+      if (user) {
+        authArea.innerHTML = `<span style="font-size:13px;margin-right:10px;">${user.email}</span><button class="danger" id="logoutBtn">Sign Out</button>`;
+        document.getElementById("logoutBtn").onclick = () => signOut(auth);
+        statusBar.textContent = "✓ Connected to Sports Live Cloud Server (ESPN & CREX Real-Time Sync Active)";
+        listenCloudItems();
+      } else {
+        authArea.innerHTML = `<button class="primary" id="loginBtn">Sign in with Google (Admin)</button>`;
+        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
+        statusBar.textContent = "Please sign in with Google to manage provider sync, live matches & channels.";
+      }
+    });
+
+    function listenCloudItems() {
+      onSnapshot(collection(db, "cloud_items"), (snap) => {
+        const matches = [];
+        const channels = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          createdAtMap[d.id] = data.createdAt;
+          try {
+            const payload = JSON.parse(data.payloadJson || "{}");
+            if (payload.deleted) return;
+            if (data.itemType === "match") matches.push({ docId: d.id, ...payload });
+            if (data.itemType === "channel") channels.push({ docId: d.id, ...payload });
+            if (data.itemType === "config") {
+              if (payload.appTitle) document.getElementById("s_title").value = payload.appTitle;
+              if (payload.telegramLink) document.getElementById("s_tg").value = payload.telegramLink;
+              if (payload.announcement) document.getElementById("s_announce").value = payload.announcement;
+              if (typeof payload.footballSyncEnabled === "boolean") {
+                document.getElementById("p_football_sync").value = String(payload.footballSyncEnabled);
+              }
+              if (typeof payload.cricketSyncEnabled === "boolean") {
+                document.getElementById("p_cricket_sync").value = String(payload.cricketSyncEnabled);
+              }
+              if (payload.autoRefreshIntervalSec) {
+                document.getElementById("p_refresh_sec").value = String(payload.autoRefreshIntervalSec);
+              }
+              if (Array.isArray(payload.enabledFootballLeagues)) {
+                const enabledSet = new Set(payload.enabledFootballLeagues);
+                document.querySelectorAll(".league-cb").forEach(cb => {
+                  cb.checked = enabledSet.has(cb.value);
+                });
+              }
+            }
+          } catch (_) {}
+        });
+        renderMatches(matches);
+        renderChannels(channels);
+      });
+    }
+
+    function renderMatches(matches) {
+      document.getElementById("matchCount").textContent = matches.length;
+      const container = document.getElementById("matchesList");
+      container.innerHTML = matches.map(m => {
+        const enabledStreams = (m.streams || []).filter(s => s.isEnabled !== false).length;
+        return `
+          <div class="item-row">
+            <div>
+              <strong>${m.tournament}</strong><br/>
+              <span style="font-size:13px;color:var(--cyan);">${m.team1Name || m.team1Code} vs ${m.team2Name || m.team2Code} • ${m.status} (${m.matchTime})</span><br/>
+              <span style="font-size:11px;color:var(--muted);">ID: ${m.id} • Enabled Streams: ${enabledStreams}/${(m.streams || []).length}</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="danger" onclick="window.removeMatch('${m.id}')">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderChannels(channels) {
+      document.getElementById("channelCount").textContent = channels.length;
+      const container = document.getElementById("channelsList");
+      container.innerHTML = channels.map(c => `
+        <div class="item-row">
+          <div>
+            <strong>${c.name}</strong> <span style="font-size:12px;color:var(--muted);">(${c.category}) • ${c.isEnabled === false ? "Disabled" : "Enabled"}</span>
+          </div>
+          <button class="danger" onclick="window.removeChannel('${c.id}')">Delete</button>
+        </div>
+      `).join("");
+    }
+
+    window.saveMatch = async () => {
+      if (!currentUser) return alert("Please sign in with Google first!");
+      const id = (document.getElementById("m_id").value.trim() || "match-" + Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const sport = document.getElementById("m_sport").value;
+      const tournament = document.getElementById("m_tournament").value.trim() || `${sport} • INTERNATIONAL`;
+      const status = document.getElementById("m_status").value;
+      const isNationalTeam = document.getElementById("m_is_national").value === "true" || sport === "CRICKET";
+      const t1name = document.getElementById("m_t1name").value.trim() || "Team 1";
+      const t1code = document.getElementById("m_t1code").value.trim() || t1name.slice(0, 3).toUpperCase();
+      const t1flag = document.getElementById("m_t1flag").value.trim();
+      const t2name = document.getElementById("m_t2name").value.trim() || "Team 2";
+      const t2code = document.getElementById("m_t2code").value.trim() || t2name.slice(0, 3).toUpperCase();
+      const t2flag = document.getElementById("m_t2flag").value.trim();
+      const matchTime = document.getElementById("m_time").value.trim() || "Today";
+      const timeOrScore = document.getElementById("m_timer").value.trim() || (status === "LIVE" ? "LIVE NOW" : matchTime);
+      const approvedHighlightUrl = document.getElementById("m_highlight").value.trim();
+
+      const s1 = document.getElementById("m_stream1").value.trim();
+      const s1Enabled = document.getElementById("m_stream1_enabled").value === "true";
+      const s1Priority = parseInt(document.getElementById("m_stream1_priority").value || "0", 10);
+
+      const s2 = document.getElementById("m_stream2").value.trim();
+      const s2Enabled = document.getElementById("m_stream2_enabled").value === "true";
+      const s2Backup = document.getElementById("m_stream2_backup").value === "true";
+
+      const streams = [];
+      if (s1) streams.push({ id: "s1", name: "SERVER 1 FHD", quality: "1080p FHD", url: s1, isDefault: true, isEnabled: s1Enabled, priorityOrder: s1Priority, isBackup: false });
+      if (s2) streams.push({ id: "s2", name: "SERVER 2 HD", quality: "720p HD", url: s2, isDefault: false, isEnabled: s2Enabled, priorityOrder: s1Priority + 1, isBackup: s2Backup });
+
+      const payload = {
+        id, tournament, sport, status, matchTime, timeOrScore,
+        team1Name: t1name, team1Code: t1code, team1FlagUrl: t1flag,
+        team2Name: t2name, team2Code: t2code, team2FlagUrl: t2flag,
+        isNationalTeam, approvedHighlightUrl,
+        startTimeEpochMs: Date.now(),
+        streams
+      };
+
+      const docId = `match_${id}`;
+      await setDoc(doc(db, "cloud_items", docId), {
+        itemId: docId,
+        itemType: "match",
+        title: `${t1name} vs ${t2name}`,
+        payloadJson: JSON.stringify(payload),
+        visibility: "public",
+        ownerId: currentUser.uid,
+        createdAt: createdAtMap[docId] || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      alert("✓ Match & stream config published to all app users in real time!");
+    };
+
+    window.removeMatch = async (id) => {
+      if (!currentUser) return;
+      const docId = `match_${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      await setDoc(doc(db, "cloud_items", docId), {
+        itemId: docId,
+        itemType: "match",
+        title: "Deleted",
+        payloadJson: JSON.stringify({ id, deleted: true }),
+        visibility: "public",
+        ownerId: currentUser.uid,
+        createdAt: createdAtMap[docId] || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    };
+
+    window.saveChannel = async () => {
+      if (!currentUser) return alert("Please sign in with Google first!");
+      const id = (document.getElementById("c_id").value.trim() || "ch-" + Date.now()).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const name = document.getElementById("c_name").value.trim() || "Sports Channel";
+      const category = document.getElementById("c_cat").value.trim() || "Sports";
+      const isEnabled = document.getElementById("c_enabled").value === "true";
+      const priorityOrder = parseInt(document.getElementById("c_priority").value || "0", 10);
+      const logoUrl = document.getElementById("c_logo").value.trim();
+      const url = document.getElementById("c_url").value.trim();
+
+      const payload = {
+        id, name, category, logoText: name.slice(0, 3).toUpperCase(), logoUrl,
+        isFavorite: false,
+        isEnabled,
+        streams: url ? [{ id: "s1", name: `${name} FHD`, quality: "FHD", url, isDefault: true, isEnabled, priorityOrder, isBackup: false }] : []
+      };
+
+      const docId = `channel_${id}`;
+      await setDoc(doc(db, "cloud_items", docId), {
+        itemId: docId,
+        itemType: "channel",
+        title: name,
+        payloadJson: JSON.stringify(payload),
+        visibility: "public",
+        ownerId: currentUser.uid,
+        createdAt: createdAtMap[docId] || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      alert("✓ Channel published to all app users!");
+    };
+
+    window.removeChannel = async (id) => {
+      if (!currentUser) return;
+      const docId = `channel_${id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      await deleteDoc(doc(db, "cloud_items", docId));
+    };
+
+    window.saveSettings = async () => {
+      if (!currentUser) return alert("Please sign in with Google first!");
+      const docId = "config_global_app_config";
+      const enabledFootballLeagues = Array.from(document.querySelectorAll(".league-cb:checked")).map(cb => cb.value);
+      const payload = {
+        appTitle: document.getElementById("s_title").value.trim() || "Sports Live",
+        telegramLink: document.getElementById("s_tg").value.trim(),
+        announcement: document.getElementById("s_announce").value.trim(),
+        footballSyncEnabled: document.getElementById("p_football_sync").value === "true",
+        cricketSyncEnabled: document.getElementById("p_cricket_sync").value === "true",
+        autoRefreshIntervalSec: parseInt(document.getElementById("p_refresh_sec").value || "30", 10),
+        enabledFootballLeagues,
+        version: "9.0"
+      };
+      await setDoc(doc(db, "cloud_items", docId), {
+        itemId: docId,
+        itemType: "config",
+        title: payload.appTitle || "Sports Live",
+        payloadJson: JSON.stringify(payload),
+        visibility: "public",
+        ownerId: currentUser.uid,
+        createdAt: createdAtMap[docId] || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      alert("✓ Provider Sync & Broadcast Settings updated across all devices!");
+    };
+  </script>
+  <script>
+    function switchTab(tab) {
+      ["providers", "matches", "channels", "settings"].forEach(t => {
+        document.getElementById("tab-" + t).style.display = (t === tab) ? "block" : "none";
+      });
+      document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
+        btn.classList.toggle("active", ["providers", "matches", "channels", "settings"][idx] === tab);
+      });
+    }
+  </script>
+</body>
+</html>
