@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "PLAYLIVE"
+rootProject.name = "PlayLive"
 
 include(":app")

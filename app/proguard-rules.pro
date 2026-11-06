@@ -1,21 +1,27 @@
 # Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep all app data models, Firestore models, and decryption utilities
+-keep class com.example.data.** { *; }
+-keep class com.example.player.** { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Media3 / ExoPlayer HLS, DASH & ClearKey DRM
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# OkHttp & Okio
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn javax.annotation.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# Firebase Firestore & Auth
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Kotlinx Coroutines
+-dontwarn kotlinx.coroutines.**

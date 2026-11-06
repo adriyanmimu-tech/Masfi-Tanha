@@ -36,6 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
+import coil.Coil
+import coil.ImageLoader
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import com.example.data.model.*
 import com.example.data.repository.SportsStreamRepository
 import com.example.player.ExoPlayerManager
@@ -71,6 +76,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Configure lightweight, high-speed image caching for team shields & tournament logos
+        Coil.setImageLoader(
+            ImageLoader.Builder(applicationContext)
+                .crossfade(true)
+                .allowHardware(true)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCache {
+                    MemoryCache.Builder(applicationContext)
+                        .maxSizePercent(0.18)
+                        .build()
+                }
+                .diskCache {
+                    DiskCache.Builder()
+                        .directory(applicationContext.cacheDir.resolve("team_logos_cache"))
+                        .maxSizeBytes(24L * 1024L * 1024L)
+                        .build()
+                }
+                .build()
+        )
 
         repository = SportsStreamRepository(applicationContext)
         playerManager = ExoPlayerManager(applicationContext)
@@ -372,6 +398,14 @@ fun FootballLiveTvApp(
         }
 
         AppScreen.MAIN_TABS -> {
+            BackHandler(enabled = isSearching || selectedTab != NavTab.LIVE_EVENTS) {
+                if (isSearching) {
+                    isSearching = false
+                    searchQuery = ""
+                } else {
+                    selectedTab = NavTab.LIVE_EVENTS
+                }
+            }
             Scaffold(
                 topBar = {
                     Column {
