@@ -574,13 +574,8 @@ object TeamFlagResolver {
         }
         nationalTeamMap[cleanName]?.let { return it }
         val stripped = cleanName
-            .removeSuffix(" men")
-            .removeSuffix(" women")
-            .removeSuffix(" w")
-            .removeSuffix(" a")
-            .removeSuffix(" xi")
-            .removeSuffix(" u19")
-            .removeSuffix(" u-19")
+            .replace(Regex("\\b(men|women|w|a|xi|u-?19|u-?17|u-?20|u-?21|u-?23|under[- ]?19|emerging|shaheens|lions)\\b"), "")
+            .replace(Regex("\\s+"), " ")
             .trim()
         if (stripped.isNotBlank()) {
             nationalTeamMap[stripped]?.let { return it }

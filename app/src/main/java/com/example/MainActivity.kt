@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var repository: SportsStreamRepository
     private lateinit var playerManager: ExoPlayerManager
+    private val isInPipModeFlow = kotlinx.coroutines.flow.MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,13 +103,30 @@ class MainActivity : ComponentActivity() {
         playerManager = ExoPlayerManager(applicationContext)
 
         setContent {
+            val isInPipMode by isInPipModeFlow.collectAsState()
             MyApplicationTheme {
                 FootballLiveTvApp(
                     repository = repository,
                     playerManager = playerManager,
+                    isInPipMode = isInPipMode,
                     onEnterPiP = { triggerPictureInPicture() }
                 )
             }
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        isInPipModeFlow.value = isInPictureInPictureMode
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            isInPipModeFlow.value = isInPictureInPictureMode
         }
     }
 
@@ -122,11 +140,16 @@ class MainActivity : ComponentActivity() {
     private fun triggerPictureInPicture() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
+                isInPipModeFlow.value = true
                 val params = PictureInPictureParams.Builder()
                     .setAspectRatio(Rational(16, 9))
                     .build()
-                enterPictureInPictureMode(params)
+                val entered = enterPictureInPictureMode(params)
+                if (!entered) {
+                    isInPipModeFlow.value = false
+                }
             } catch (e: Exception) {
+                isInPipModeFlow.value = false
                 e.printStackTrace()
             }
         }
@@ -144,6 +167,7 @@ class MainActivity : ComponentActivity() {
 fun FootballLiveTvApp(
     repository: SportsStreamRepository,
     playerManager: ExoPlayerManager,
+    isInPipMode: Boolean = false,
     onEnterPiP: () -> Unit
 ) {
     val context = LocalContext.current
@@ -356,6 +380,25 @@ fun FootballLiveTvApp(
     }
 
     // Top Level Navigation
+    if (isInPipMode && currentStream != null) {
+        PlayerScreen(
+            match = activeMatch,
+            channelTitle = activeChannelTitle,
+            streams = activeStreams,
+            playerManager = playerManager,
+            forceLowQuality = config.forceLowQuality,
+            isInPipMode = true,
+            onBackClick = {
+                currentScreen = AppScreen.MAIN_TABS
+            },
+            otherMatches = emptyList(),
+            onSwitchMatch = {},
+            onFavoriteToggle = {},
+            onEnterPiP = onEnterPiP
+        )
+        return
+    }
+
     when (currentScreen) {
         AppScreen.SPLASH -> {
             SplashScreen(
@@ -373,6 +416,7 @@ fun FootballLiveTvApp(
                 streams = activeStreams,
                 playerManager = playerManager,
                 forceLowQuality = config.forceLowQuality,
+                isInPipMode = isInPipMode,
                 onBackClick = {
                     currentScreen = AppScreen.MAIN_TABS
                 },

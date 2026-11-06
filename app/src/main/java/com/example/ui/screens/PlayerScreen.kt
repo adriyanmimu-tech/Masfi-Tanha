@@ -59,6 +59,7 @@ fun PlayerScreen(
     streams: List<StreamSource>,
     playerManager: ExoPlayerManager,
     forceLowQuality: Boolean = false,
+    isInPipMode: Boolean = false,
     onBackClick: () -> Unit,
     otherMatches: List<LiveMatch> = emptyList(),
     onSwitchMatch: (LiveMatch) -> Unit = {},
@@ -137,12 +138,36 @@ fun PlayerScreen(
         else -> "Live Sports Stream"
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
+            .background(if (isInPipMode) Color.Black else NavyDark)
     ) {
-        if (isFullscreen) {
+        val isCompactPipWindow = isInPipMode || maxHeight < 280.dp || maxWidth < 300.dp
+
+        if (isCompactPipWindow) {
+            // Clean Picture-in-Picture (PiP) Mini Screen: 100% Video Only, ZERO UI/Controls clutter
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = playerManager.getPlayer()
+                        useController = false
+                        this.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        this.keepScreenOn = true
+                        layoutParams = FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                },
+                update = { view ->
+                    view.player = playerManager.getPlayer()
+                    view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    view.keepScreenOn = isPlaying
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (isFullscreen) {
             // Fullscreen Player
             Box(modifier = Modifier.fillMaxSize()) {
                 AndroidView(
@@ -283,7 +308,7 @@ fun PlayerScreen(
                     )
                 }
 
-                // Horizontal Streams Available Buttons (matching screenshots 6, 7 & 9)
+                // Horizontal Streams Available Buttons
                 if (streams.isNotEmpty()) {
                     Row(
                         modifier = Modifier
@@ -318,7 +343,7 @@ fun PlayerScreen(
                     }
                 }
 
-                // Match details card or channel banner (no small score clutter)
+                // Match details card or channel banner (both Team 1 and Team 2 flags guaranteed visible)
                 if (match != null) {
                     Card(
                         modifier = Modifier
@@ -330,7 +355,7 @@ fun PlayerScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 10.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -345,14 +370,21 @@ fun PlayerScreen(
                                     isNationalTeam = match.isNationalTeam
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = match.team1Name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            fontSize = 13.sp
+                                        ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(match.team1Code, style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary))
+                                    Text(
+                                        text = match.team1Code,
+                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary)
+                                    )
                                 }
                             }
 
@@ -371,7 +403,7 @@ fun PlayerScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = CyanAccent,
-                                        fontSize = 12.sp
+                                        fontSize = 11.sp
                                     )
                                 )
                                 if (match.matchTime.isNotBlank()) {
@@ -379,7 +411,7 @@ fun PlayerScreen(
                                         text = match.matchTime,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = TextSecondary,
-                                            fontSize = 9.sp
+                                            fontSize = 8.5.sp
                                         ),
                                         maxLines = 1
                                     )
@@ -391,15 +423,26 @@ fun PlayerScreen(
                                 horizontalArrangement = Arrangement.End,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Column(horizontalAlignment = Alignment.End) {
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Text(
                                         text = match.team2Name,
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = TextPrimary),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            fontSize = 13.sp
+                                        ),
                                         textAlign = TextAlign.End,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(match.team2Code, style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary), textAlign = TextAlign.End)
+                                    Text(
+                                        text = match.team2Code,
+                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary),
+                                        textAlign = TextAlign.End
+                                    )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 TeamFlagBadge(
@@ -413,7 +456,7 @@ fun PlayerScreen(
                     }
                 }
 
-                // Other Live Matches List (matching screenshot 6)
+                // Other Live Matches List
                 if (otherMatches.isNotEmpty()) {
                     Column(
                         modifier = Modifier
@@ -547,6 +590,13 @@ fun PortraitVideoControlsOverlay(
     onNextFallback: () -> Unit
 ) {
     var showControls by remember { mutableStateOf(true) }
+
+    LaunchedEffect(showControls, isPlaying) {
+        if (showControls && isPlaying) {
+            kotlinx.coroutines.delay(3500L)
+            showControls = false
+        }
+    }
 
     Box(
         modifier = Modifier

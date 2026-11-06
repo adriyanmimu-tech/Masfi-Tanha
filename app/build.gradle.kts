@@ -17,14 +17,10 @@ android {
     applicationId = "com.aistudio.footballtv.kpqwle"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "1.2.0"
+    versionCode = 4
+    versionName = "1.2.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-  }
-
-  androidResources {
-    localeFilters += listOf("en", "bn")
   }
 
   packaging {
@@ -60,9 +56,8 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = true
-      isMinifyEnabled = true
-      isShrinkResources = true
+      isCrunchPngs = false
+      isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
       // AI Studio.

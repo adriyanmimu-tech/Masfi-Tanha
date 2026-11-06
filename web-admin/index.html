@@ -1115,9 +1115,15 @@
       }
     }
 
-    function mapSport(cat, eventName) {
-      const s = `${cat} ${eventName}`.toLowerCase();
-      if (s.includes("cricket") || s.includes("ipl") || s.includes("odi") || s.includes("t20") || s.includes("test")) return "CRICKET";
+    function mapSport(cat, eventName, t1 = "", t2 = "") {
+      const s = `${cat} ${eventName} ${t1} ${t2}`.toLowerCase();
+      if (
+        s.includes("cricket") || s.includes("ipl") || s.includes("odi") || s.includes("t20") || s.includes("test") ||
+        s.includes("psl") || s.includes("bbl") || s.includes("bpl") || s.includes("asia cup") || s.includes("tri-series") ||
+        s.includes("tri series") || s.includes("tour of") || s.includes("united arab emirates") || s.includes("uae") ||
+        s.includes("pakistan") || s.includes("bangladesh") || s.includes("sri lanka") || s.includes("afghanistan") ||
+        s.includes("zimbabwe") || s.includes("west indies") || s.includes("new zealand")
+      ) return "CRICKET";
       if (s.includes("tennis") || s.includes("wta") || s.includes("atp")) return "TENNIS";
       if (s.includes("boxing") || s.includes("ufc") || s.includes("wwe") || s.includes("mma") || s.includes("fight")) return "BOXING";
       if (s.includes("basketball") || s.includes("nba")) return "BASKETBALL";
@@ -1145,12 +1151,19 @@
             const t1 = (ev.teamAName || "").trim();
             const t2 = (ev.teamBName || "").trim();
             if (!t1 || !t2 || t1.includes("*")) return;
+            const sport = mapSport(ev.category || "", ev.eventName || "", t1, t2);
             const { epochMs, timeText, dateText } = parseUtcToDhaka(ev.date, ev.time);
-            const durationMs = ((ev.duration || 165) * 60000);
+            const defaultDurMin = sport === "CRICKET" ? 600 : 210;
+            const durationMs = Math.max((ev.duration || defaultDurMin) * 60000, defaultDurMin * 60000);
             const endMs = epochMs + durationMs;
-            if (epochMs > 0 && nowMs > endMs + 24 * 3600 * 1000) return;
-            const status = (epochMs > 0 && nowMs >= epochMs && nowMs <= endMs) ? "LIVE" : (epochMs > nowMs ? "UPCOMING" : "FINISHED");
-            const sport = mapSport(ev.category || "", ev.eventName || "");
+            const dayMs = 24 * 3600 * 1000;
+            const daysSinceStart = epochMs > 0 && nowMs > epochMs ? Math.floor((nowMs - epochMs) / dayMs) : 0;
+            const todayProjectedStartMs = epochMs + daysSinceStart * dayMs;
+            const isDailySeriesLive = sport === "CRICKET" && daysSinceStart >= 1 && daysSinceStart <= 7 &&
+              nowMs >= (todayProjectedStartMs - 1800000) && nowMs <= (todayProjectedStartMs + durationMs);
+            const status = (epochMs > 0 && ((nowMs >= (epochMs - 900000) && nowMs <= endMs) || isDailySeriesLive))
+              ? "LIVE"
+              : (epochMs > nowMs ? "UPCOMING" : "FINISHED");
             const logo = (ev.eventLogo || "").replace("http://", "https://");
             parsed.push({
               id: `pz-ev-${idx}`,

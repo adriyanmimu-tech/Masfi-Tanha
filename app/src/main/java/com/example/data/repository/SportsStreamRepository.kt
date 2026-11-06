@@ -525,6 +525,11 @@ class SportsStreamRepository(
     private fun normalizeTeamPairKey(sport: SportType, team1: String, team2: String): String {
         fun clean(name: String): String {
             return name.lowercase(Locale.US)
+                .replace("united arab emirates", "uae")
+                .replace("u.a.e.", "uae")
+                .replace("u.a.e", "uae")
+                .replace("united states of america", "usa")
+                .replace("united states", "usa")
                 .replace(Regex("[^a-z0-9 ]"), " ")
                 .replace(Regex("\\b(fc|cf|sc|ac|afc|club|deportivo|real|sporting)\\b"), " ")
                 .replace(Regex("\\s+"), " ")

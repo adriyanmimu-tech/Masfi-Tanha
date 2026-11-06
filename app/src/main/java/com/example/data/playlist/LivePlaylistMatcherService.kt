@@ -995,12 +995,13 @@ class LivePlaylistMatcherService(
             .filter { playzMatchPointerById.containsKey(it.id) }
             .sortedWith(
                 compareByDescending<LiveMatch> { it.status == MatchStatus.LIVE }
+                    .thenByDescending { it.sport == SportType.CRICKET }
                     .thenBy { it.status != MatchStatus.UPCOMING }
                     .thenBy { if (it.startTimeEpochMs > 0L) it.startTimeEpochMs else Long.MAX_VALUE }
             )
-            .take(18)
+            .take(45)
 
-        for (batch in matchesToPreload.chunked(9)) {
+        for (batch in matchesToPreload.chunked(10)) {
             kotlinx.coroutines.supervisorScope {
                 val preloadJobs = batch.map { m ->
                     async {
@@ -1045,9 +1046,13 @@ class LivePlaylistMatcherService(
             val utcFmt = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.US).apply {
                 timeZone = TimeZone.getTimeZone("GMT")
             }
+            val utcDateOnlyFmt = SimpleDateFormat("dd/MM/yyyy", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("GMT")
+            }
             val dhakaFmt = SimpleDateFormat("hh:mm a | dd/MM/yyyy", Locale.US).apply {
                 timeZone = DHAKA_TZ
             }
+            val todayUtcDateStr = utcDateOnlyFmt.format(Date(nowMs))
 
             for (i in 0 until arr.length()) {
                 val wrapper = arr.optJSONObject(i) ?: continue
@@ -1057,8 +1062,15 @@ class LivePlaylistMatcherService(
 
                 val categoryRaw = ev.optString("category", "Football").trim()
                 val eventName = ev.optString("eventName", categoryRaw).trim()
-                val teamA = ev.optString("teamAName", "").trim()
-                val teamB = ev.optString("teamBName", "").trim()
+                var teamA = ev.optString("teamAName", "").trim()
+                var teamB = ev.optString("teamBName", "").trim()
+                if (teamA.isBlank() && teamB.isBlank()) {
+                    if (eventName.contains(" vs ", ignoreCase = true)) {
+                        val parts = eventName.split(Regex("\\s+vs\\s+", RegexOption.IGNORE_CASE), limit = 2)
+                        teamA = parts.getOrNull(0)?.trim().orEmpty()
+                        teamB = parts.getOrNull(1)?.trim().orEmpty()
+                    }
+                }
                 if (teamA.isBlank() && teamB.isBlank()) continue
 
                 val eventLogo = if (ev.isNull("eventLogo")) "" else ev.optString("eventLogo", "").trim()
@@ -1106,14 +1118,14 @@ class LivePlaylistMatcherService(
                 }
 
                 // Skip placeholder/empty non-match entries (e.g. "LaLiga links", "Coppa ITALIA Links", "NPC Links", "NRL LINKS")
-                if (teamA.contains("link", ignoreCase = true) ||
-                    teamB.contains("link", ignoreCase = true) ||
+                if (teamA.endsWith("links", ignoreCase = true) ||
+                    teamB.endsWith("links", ignoreCase = true) ||
                     (linkNames.isEmpty() && linksPointer.isBlank())
                 ) {
                     continue
                 }
 
-                val sportType = mapCategoryToSportType(categoryRaw, eventName)
+                val sportType = mapCategoryToSportType(categoryRaw, eventName, teamA, teamB)
                 val isNatMatch = com.example.data.util.TeamFlagResolver.isRecognizedNationalTeam(teamA) ||
                     com.example.data.util.TeamFlagResolver.isRecognizedNationalTeam(teamB)
                 val resolvedTeamA = com.example.data.util.TeamFlagResolver.resolveForMatch(
@@ -1133,13 +1145,33 @@ class LivePlaylistMatcherService(
                     if (dateStr.isNotBlank()) utcFmt.parse("$dateStr $timeStr")?.time ?: 0L else 0L
                 }.getOrDefault(0L)
 
+                val todayProjectedStartMs = runCatching {
+                    utcFmt.parse("$todayUtcDateStr $timeStr")?.time ?: 0L
+                }.getOrDefault(0L)
+
+                val isShortFormatCricket = eventName.contains("T10", true) ||
+                    eventName.contains("T20", true) ||
+                    eventName.contains("IPL", true) ||
+                    eventName.contains("PSL", true) ||
+                    eventName.contains("BPL", true) ||
+                    eventName.contains("Big Bash", true) ||
+                    eventName.contains("BBL", true) ||
+                    eventName.contains("CPL", true) ||
+                    eventName.contains("LPL", true) ||
+                    eventName.contains("SA20", true) ||
+                    eventName.contains("ILT20", true) ||
+                    eventName.contains("Hundred", true) ||
+                    eventName.contains("Blast", true)
+
                 val defaultDurationMs = when {
-                    sportType == SportType.CRICKET && (eventName.contains("Test", true) || eventName.contains("One Day", true) || eventName.contains("ODI", true)) ->
-                        8 * 3600_000L
-                    sportType == SportType.CRICKET ->
-                        4 * 3600_000L
-                    else ->
+                    sportType == SportType.CRICKET && eventName.contains("T10", true) ->
                         35 * 360_000L // 3.5 hours
+                    sportType == SportType.CRICKET && isShortFormatCricket ->
+                        6 * 3600_000L // 6 hours for T20
+                    sportType == SportType.CRICKET ->
+                        10 * 3600_000L // 10 hours for ODI / One-Day / International Series / Test day (e.g. Pakistan vs UAE)
+                    else ->
+                        4 * 3600_000L // 4 hours for Football & other sports
                 }
 
                 val parsedEndMs = runCatching {
@@ -1150,25 +1182,37 @@ class LivePlaylistMatcherService(
                     }
                 }.getOrDefault(0L)
 
+                // Ensure server's short placeholder end_time never cuts off an active Cricket/Football match early
                 val endEpochMs = when {
+                    startEpochMs > 0L && parsedEndMs > 0L -> maxOf(parsedEndMs, startEpochMs + defaultDurationMs)
                     parsedEndMs > 0L -> parsedEndMs
                     startEpochMs > 0L -> startEpochMs + defaultDurationMs
                     else -> 0L
                 }
 
-                val status = when {
-                    startEpochMs in 1..nowMs && nowMs <= endEpochMs -> MatchStatus.LIVE
-                    endEpochMs in 1 until nowMs -> MatchStatus.FINISHED
-                    else -> MatchStatus.UPCOMING
-                }
+                // Mark LIVE starting 30 minutes before kickoff (toss / pre-match broadcast) through full match duration.
+                // Also support multi-day/reused series cards in events.txt whose daily time window is currently active.
+                val liveStartThresholdMs = if (startEpochMs > 30 * 60_000L) startEpochMs - 30 * 60_000L else startEpochMs
+                val todayWindowStartMs = if (todayProjectedStartMs > 30 * 60_000L) todayProjectedStartMs - 30 * 60_000L else todayProjectedStartMs
+                val todayWindowEndMs = if (todayProjectedStartMs > 0L) todayProjectedStartMs + defaultDurationMs else 0L
+                val isDailySeriesWindowLive = sportType == SportType.CRICKET &&
+                    startEpochMs in 1..nowMs &&
+                    todayProjectedStartMs > 0L &&
+                    nowMs in todayWindowStartMs..todayWindowEndMs
 
-                // Skip ancient finished events that ended more than 24 hours ago
-                if (status == MatchStatus.FINISHED && endEpochMs > 0L && (nowMs - endEpochMs) > 24 * 3600_000L) {
-                    continue
+                val status = when {
+                    (startEpochMs > 0L && nowMs in liveStartThresholdMs..endEpochMs) || isDailySeriesWindowLive ->
+                        MatchStatus.LIVE
+                    startEpochMs > nowMs ->
+                        MatchStatus.UPCOMING
+                    endEpochMs in 1 until nowMs ->
+                        MatchStatus.FINISHED
+                    else ->
+                        MatchStatus.LIVE
                 }
 
                 // Deduplicate identical events in events.txt (including duplicate fixtures with different pointer timestamps)
-                val dedupKey = "${categoryRaw.lowercase(Locale.US)}|${teamA.lowercase(Locale.US)}|${teamB.lowercase(Locale.US)}|$dateStr|$timeStr"
+                val dedupKey = "${sportType.name}|${normalizeTeamToken(teamA)}|${normalizeTeamToken(teamB)}|$dateStr|$timeStr"
                 if (!seenEventKeys.add(dedupKey)) {
                     continue
                 }
@@ -1187,8 +1231,13 @@ class LivePlaylistMatcherService(
                 }
                 val initialStreams = cachedResolved ?: emptyList()
 
-                val formattedDhakaTime = if (startEpochMs > 0L) {
-                    dhakaFmt.format(Date(startEpochMs))
+                val effectiveDisplayEpoch = if (isDailySeriesWindowLive && todayProjectedStartMs > 0L) {
+                    todayProjectedStartMs
+                } else {
+                    startEpochMs
+                }
+                val formattedDhakaTime = if (effectiveDisplayEpoch > 0L) {
+                    dhakaFmt.format(Date(effectiveDisplayEpoch))
                 } else {
                     "$timeStr | $dateStr"
                 }
@@ -1213,9 +1262,13 @@ class LivePlaylistMatcherService(
                     streams = initialStreams,
                     provider = "PLAYZ",
                     competitionId = eventName.lowercase(Locale.US),
-                    startTimeEpochMs = startEpochMs,
+                    startTimeEpochMs = effectiveDisplayEpoch,
                     isNationalTeam = isNatMatch,
-                    broadcastChannels = initialStreams.map { it.name }.take(4)
+                    broadcastChannels = if (initialStreams.isNotEmpty()) {
+                        initialStreams.map { it.name }.take(4)
+                    } else {
+                        linkNames.take(4)
+                    }
                 )
                 playzMatchesById[matchId] = match
                 result.add(match)
@@ -1298,7 +1351,7 @@ class LivePlaylistMatcherService(
                         duration = if (dateFormatted.isNotBlank()) "$timeFormatted $dateFormatted" else "Highlights",
                         thumbnailUrl = logo,
                         videoUrl = if (linksPtr.startsWith("http")) linksPtr else "https://pabbdyzone.shop/${linksPtr.removePrefix("/")}",
-                        sport = mapCategoryToSportType(cat, eventName),
+                        sport = mapCategoryToSportType(cat, eventName, teamA, teamB),
                         isApproved = true
                     )
                 )
@@ -1314,15 +1367,35 @@ class LivePlaylistMatcherService(
         }
     }
 
-    private fun mapCategoryToSportType(categoryRaw: String, eventName: String): SportType {
+    private fun mapCategoryToSportType(
+        categoryRaw: String,
+        eventName: String,
+        teamA: String = "",
+        teamB: String = ""
+    ): SportType {
         val combined = "$categoryRaw $eventName".lowercase(Locale.US)
+        val teamsLower = "$teamA $teamB".lowercase(Locale.US)
+        val cricketNationHints = listOf(
+            "pakistan", "india", "bangladesh", "sri lanka", "afghanistan", "zimbabwe",
+            "west indies", "windies", "united arab emirates", "uae", "oman", "nepal",
+            "namibia", "scotland", "ireland", "papua new guinea", "hong kong"
+        )
+        val hasExplicitFootball = combined.contains("football") || combined.contains("soccer") ||
+            combined.contains("uefa") || combined.contains("laliga") || combined.contains("premier league") ||
+            combined.contains("serie a") || combined.contains("bundesliga") || combined.contains("champions league") ||
+            combined.contains("europa") || combined.contains("copa") || combined.contains("ligue 1") ||
+            combined.contains("world cup qualification") || combined.contains("afc Asian")
         return when {
             combined.contains("cricket") || combined.contains("ipl") || combined.contains("psl") ||
-                combined.contains("bpl") || combined.contains("big bash") || combined.contains("wtc") ||
-                combined.contains("odi") || combined.contains("t20") || combined.contains("test series") -> SportType.CRICKET
-            combined.contains("football") || combined.contains("soccer") || combined.contains("uefa") ||
-                combined.contains("laliga") || combined.contains("premier league") || combined.contains("serie a") ||
-                combined.contains("bundesliga") || combined.contains("champions league") || combined.contains("golazo") -> SportType.FOOTBALL
+                combined.contains("bpl") || combined.contains("big bash") || combined.contains("bbl") ||
+                combined.contains("wtc") || combined.contains("odi") || combined.contains("t20") ||
+                combined.contains("t10") || combined.contains("test series") || combined.contains("icc") ||
+                combined.contains("acc ") || combined.contains("asia cup") || combined.contains("tri-series") ||
+                combined.contains("tri series") || combined.contains("tour of") || combined.contains("champions trophy") ||
+                combined.contains("ilt20") || combined.contains("sa20") || combined.contains("cpl") ||
+                combined.contains("lpl") || combined.contains("hundred") || combined.contains("super smash") ||
+                (!hasExplicitFootball && cricketNationHints.count { teamsLower.contains(it) } >= 2) -> SportType.CRICKET
+            hasExplicitFootball || combined.contains("golazo") -> SportType.FOOTBALL
             combined.contains("boxing") || combined.contains("mma") || combined.contains("ufc") ||
                 combined.contains("wwe") || combined.contains("aew") || combined.contains("fight") ||
                 combined.contains("pfl") || combined.contains("smackdown") || combined.contains("raw") ||
@@ -1350,7 +1423,7 @@ class LivePlaylistMatcherService(
         playzMatchesById[match.id]?.let { return it }
         val t1 = normalizeTeamToken(match.team1Name)
         val t2 = normalizeTeamToken(match.team2Name)
-        if (t1.length < 3 || t2.length < 3) return null
+        if (t1.length < 2 || t2.length < 2) return null
 
         return playzMatchesById.values.firstOrNull { candidate ->
             candidate.sport == match.sport &&
@@ -1365,11 +1438,20 @@ class LivePlaylistMatcherService(
     }
 
     private fun normalizeTeamToken(name: String): String {
-        return name.lowercase(Locale.US)
-            .replace(Regex("\\b(fc|cf|sc|ac|afc|club|women|w|u19|under 19|jk|sk|fk|nk)\\b"), " ")
+        val cleaned = name.lowercase(Locale.US)
+            .replace("united arab emirates", "uae")
+            .replace("united states of america", "usa")
+            .replace("united states", "usa")
+            .replace("south africa", "rsa")
+            .replace("new zealand", "nz")
+            .replace("sri lanka", "sl")
+            .replace("west indies", "wi")
+            .replace("windies", "wi")
+            .replace(Regex("\\b(fc|cf|sc|ac|afc|club|women|w|u19|under 19|u-19|a|shaheens|emerging|jk|sk|fk|nk)\\b"), " ")
             .replace(Regex("[^a-z0-9 ]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
+        return cleaned
     }
 
     fun registerAdminCustomM3uEntries(
