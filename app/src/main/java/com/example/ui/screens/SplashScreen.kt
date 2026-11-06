@@ -44,8 +44,8 @@ fun SplashScreen(
     )
 
     LaunchedEffect(Unit) {
-        // Display splash for 1.8 seconds then proceed to main tabs
-        delay(1800)
+        // Display splash briefly (0.65s) then proceed immediately to main tabs
+        delay(650)
         onSplashFinished()
     }
 

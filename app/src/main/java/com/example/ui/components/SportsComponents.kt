@@ -1267,14 +1267,18 @@ fun FinishedBadge() {
 fun MultipleStreamsModalDialog(
     streams: List<StreamSource>,
     currentSelectedStream: StreamSource? = null,
+    match: LiveMatch? = null,
     matchTitle: String? = null,
     matchTournament: String? = null,
     matchStatus: String? = null,
     isLoadingStreams: Boolean = false,
     matchDetailState: com.example.data.crex.CrexMatchDetailState? = null,
     approvedHighlightUrl: String? = null,
+    matchedHighlightItem: com.example.data.model.HighlightItem? = null,
     broadcastChannels: List<String> = emptyList(),
     onWatchHighlight: ((String) -> Unit)? = null,
+    onWatchHighlightItem: ((com.example.data.model.HighlightItem) -> Unit)? = null,
+    onToggleFavorite: (() -> Unit)? = null,
     onRefreshDetail: (() -> Unit)? = null,
     onStreamSelected: (StreamSource) -> Unit,
     onDismiss: () -> Unit
@@ -1293,6 +1297,40 @@ fun MultipleStreamsModalDialog(
                 compareBy<StreamSource> { it.isBackup }
                     .thenBy { it.priorityOrder }
             )
+    }
+
+    val isUpcomingMatch = match?.status == MatchStatus.UPCOMING ||
+        match?.status == MatchStatus.UNKNOWN ||
+        matchStatus.equals("UPCOMING", ignoreCase = true)
+    val isFinishedMatch = match?.status == MatchStatus.FINISHED ||
+        matchStatus.equals("FINISHED", ignoreCase = true)
+
+    var nowEpochMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(isUpcomingMatch, match?.startTimeEpochMs) {
+        if (isUpcomingMatch && (match?.startTimeEpochMs ?: 0L) > 0L) {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                nowEpochMs = System.currentTimeMillis()
+            }
+        }
+    }
+
+    val countdownText = remember(nowEpochMs, match?.startTimeEpochMs) {
+        val startMs = match?.startTimeEpochMs ?: 0L
+        val remainingSec = ((startMs - nowEpochMs) / 1000L).coerceAtLeast(0L)
+        if (startMs <= 0L || remainingSec <= 0L) {
+            "Starting Soon"
+        } else {
+            val days = remainingSec / 86400L
+            val hrs = (remainingSec % 86400L) / 3600L
+            val mins = (remainingSec % 3600L) / 60L
+            val secs = remainingSec % 60L
+            if (days > 0L) {
+                String.format(Locale.US, "%dd : %02dh : %02dm : %02ds", days, hrs, mins, secs)
+            } else {
+                String.format(Locale.US, "%02dh : %02dm : %02ds", hrs, mins, secs)
+            }
+        }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1336,21 +1374,47 @@ fun MultipleStreamsModalDialog(
                         modifier = Modifier
                             .size(46.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(CyanAccent.copy(alpha = 0.14f))
-                            .border(1.2.dp, CyanAccent.copy(alpha = 0.65f), RoundedCornerShape(14.dp)),
+                            .background(
+                                when {
+                                    isUpcomingMatch -> GoldYellow.copy(alpha = 0.14f)
+                                    isFinishedMatch -> SkyBlue.copy(alpha = 0.14f)
+                                    else -> CyanAccent.copy(alpha = 0.14f)
+                                }
+                            )
+                            .border(
+                                1.2.dp,
+                                when {
+                                    isUpcomingMatch -> GoldYellow.copy(alpha = 0.65f)
+                                    isFinishedMatch -> SkyBlue.copy(alpha = 0.65f)
+                                    else -> CyanAccent.copy(alpha = 0.65f)
+                                },
+                                RoundedCornerShape(14.dp)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Sensors,
+                            imageVector = when {
+                                isUpcomingMatch -> Icons.Default.Schedule
+                                isFinishedMatch -> Icons.Default.PlayCircle
+                                else -> Icons.Default.Sensors
+                            },
                             contentDescription = null,
-                            tint = CyanAccent,
+                            tint = when {
+                                isUpcomingMatch -> GoldYellow
+                                isFinishedMatch -> SkyBlue
+                                else -> CyanAccent
+                            },
                             modifier = Modifier.size(24.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "STREAM LAUNCHPAD",
+                            text = when {
+                                isUpcomingMatch -> "UPCOMING MATCH SCHEDULE"
+                                isFinishedMatch -> "MATCH COMPLETED"
+                                else -> "STREAM LAUNCHPAD"
+                            },
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
@@ -1361,7 +1425,7 @@ fun MultipleStreamsModalDialog(
                         Text(
                             text = matchTitle?.takeIf { it.isNotBlank() } ?: "Select a high-speed FHD server",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = CyanAccent,
+                                color = if (isUpcomingMatch) GoldYellow else CyanAccent,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 12.5.sp
                             ),
@@ -1389,94 +1453,391 @@ fun MultipleStreamsModalDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoadingStreams && enabledStreams.isEmpty()) {
+            // Team vs Team Header Banner inside Modal when match is present
+            if (match != null && (isUpcomingMatch || isFinishedMatch)) {
                 Surface(
-                    color = Color(0xFF121B2B),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = CyanAccent,
-                            strokeWidth = 2.2.dp
+                    color = Color(0xFF111A2B),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            1.dp,
+                            if (isUpcomingMatch) GoldYellow.copy(alpha = 0.35f) else NavyBorder,
+                            RoundedCornerShape(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                TeamFlagBadge(
+                                    flag = match.team1FlagUrl,
+                                    code = match.team1Code,
+                                    teamName = match.team1Name,
+                                    isNationalTeam = match.isNationalTeam
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = match.team1Name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    ),
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                if (isUpcomingMatch) {
+                                    UpcomingBadge()
+                                } else {
+                                    FinishedBadge()
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "VS",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = CyanAccent,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                TeamFlagBadge(
+                                    flag = match.team2FlagUrl,
+                                    code = match.team2Code,
+                                    teamName = match.team2Name,
+                                    isNationalTeam = match.isNationalTeam
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = match.team2Name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 13.sp
+                                    ),
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        if (isUpcomingMatch) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color(0xFF090E18))
+                                    .border(1.dp, GoldYellow.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                    .padding(vertical = 12.dp, horizontal = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "MATCH STARTS IN",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = TextSecondary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp,
+                                            letterSpacing = 1.2.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = countdownText,
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            color = GoldYellow,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 22.sp,
+                                            letterSpacing = 1.sp
+                                        )
+                                    )
+                                    if (match.matchTime.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Kickoff: ${match.matchTime} (BD Time)",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = CyanAccent,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 11.5.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "এই ম্যাচটি এখনো শুরু হয়নি। খেলা শুরুর ১৫-৩০ মিনিট আগে লাইভ স্ট্রিম সার্ভার অটোমেটিক চালু হবে।",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 12.sp
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+
+                            if (onToggleFavorite != null) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = onToggleFavorite,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(44.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                                        brush = androidx.compose.ui.graphics.SolidColor(
+                                            if (match.isFavorite) GoldYellow else CyanAccent
+                                        )
+                                    ),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (match.isFavorite) GoldYellow.copy(alpha = 0.16f) else CyanAccent.copy(alpha = 0.12f)
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = if (match.isFavorite) GoldYellow else CyanAccent,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (match.isFavorite) "Saved in Favourites ⭐" else "Add to Favourites / Remind Me",
+                                        color = if (match.isFavorite) GoldYellow else CyanAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        } else if (isFinishedMatch) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "এই ম্যাচটি সমাপ্ত হয়েছে। লাইভ স্ট্রিমিং বন্ধ রয়েছে।",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 12.5.sp
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            if (isFinishedMatch) {
+                // For Finished matches: prioritize Official Highlights button instead of dead live links
+                if (matchedHighlightItem != null && onWatchHighlightItem != null) {
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onWatchHighlightItem(matchedHighlightItem)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("watch_matched_highlight_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GoldYellow,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            contentDescription = "Watch Highlight",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Decrypting live FHD servers...",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.SemiBold
+                            text = "Watch Match Highlights (FHD)",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp
+                            )
+                        )
+                    }
+                } else if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
+                    Button(
+                        onClick = {
+                            onWatchHighlight(approvedHighlightUrl)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .testTag("watch_highlight_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GoldYellow,
+                            contentColor = Color.Black
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            contentDescription = "Watch Highlight",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Watch Official Highlight",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp
                             )
                         )
                     }
                 }
-            } else if (enabledStreams.isEmpty()) {
-                Surface(
-                    color = Color(0xFF121B2B),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+            } else if (isUpcomingMatch) {
+                // For Upcoming matches: if the server has already uploaded early pre-match links, show them below the countdown
+                if (enabledStreams.isNotEmpty()) {
                     Text(
-                        text = "No active stream servers are currently online for this event.",
-                        style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(20.dp)
+                        text = "PRE-MATCH SERVERS AVAILABLE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = CyanAccent,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp,
+                            letterSpacing = 1.sp
+                        ),
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(bottom = 8.dp)
                     )
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 340.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    enabledStreams.forEach { stream ->
-                        val isSelected = currentSelectedStream?.id == stream.id
-                        StreamItemButton(
-                            stream = stream,
-                            isSelected = isSelected,
-                            onClick = {
-                                onStreamSelected(stream)
-                                onDismiss()
-                            }
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        enabledStreams.forEach { stream ->
+                            val isSelected = currentSelectedStream?.id == stream.id
+                            StreamItemButton(
+                                stream = stream,
+                                isSelected = isSelected,
+                                onClick = {
+                                    onStreamSelected(stream)
+                                    onDismiss()
+                                }
+                            )
+                        }
                     }
                 }
-            }
+            } else {
+                // LIVE Match / Channel / Highlight Stream Picker
+                if (isLoadingStreams && enabledStreams.isEmpty()) {
+                    Surface(
+                        color = Color(0xFF121B2B),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = CyanAccent,
+                                strokeWidth = 2.2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Decrypting live FHD servers...",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                    }
+                } else if (enabledStreams.isEmpty()) {
+                    Surface(
+                        color = Color(0xFF121B2B),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "No active stream servers are currently online for this event.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(20.dp)
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 340.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        enabledStreams.forEach { stream ->
+                            val isSelected = currentSelectedStream?.id == stream.id
+                            StreamItemButton(
+                                stream = stream,
+                                isSelected = isSelected,
+                                onClick = {
+                                    onStreamSelected(stream)
+                                    onDismiss()
+                                }
+                            )
+                        }
+                    }
+                }
 
-            if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = {
-                        onWatchHighlight(approvedHighlightUrl)
-                        onDismiss()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("watch_highlight_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = GoldYellow.copy(alpha = 0.2f),
-                        contentColor = GoldYellow
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.PlayCircle,
-                        contentDescription = "Watch Highlight",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Watch Official Highlight",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                    )
+                if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            onWatchHighlight(approvedHighlightUrl)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
+                            .testTag("watch_highlight_button"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GoldYellow.copy(alpha = 0.2f),
+                            contentColor = GoldYellow
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PlayCircle,
+                            contentDescription = "Watch Highlight",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Watch Official Highlight",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
                 }
             }
 

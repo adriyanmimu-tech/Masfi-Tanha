@@ -990,24 +990,24 @@ class LivePlaylistMatcherService(
             emptyList()
         }
 
-        // Pre-resolve LIVE and imminent UPCOMING matches' dedicated `pro/<id>.txt` streams in concurrent batches
-        val matchesToPreload = parsedMatches
-            .filter { playzMatchPointerById.containsKey(it.id) }
-            .sortedWith(
-                compareByDescending<LiveMatch> { it.status == MatchStatus.LIVE }
-                    .thenByDescending { it.sport == SportType.CRICKET }
-                    .thenBy { it.status != MatchStatus.UPCOMING }
-                    .thenBy { if (it.startTimeEpochMs > 0L) it.startTimeEpochMs else Long.MAX_VALUE }
-            )
-            .take(45)
+        val parsedHighlights = if (!highlightsJson.isNullOrBlank()) {
+            parsePlayzHighlightsJson(highlightsJson)
+        } else {
+            emptyList()
+        }
 
-        for (batch in matchesToPreload.chunked(10)) {
-            kotlinx.coroutines.supervisorScope {
-                val preloadJobs = batch.map { m ->
-                    async {
-                        runCatching {
-                            val ptr = playzMatchPointerById[m.id] ?: return@async
-                            val streams = resolvePlayzStreamsForPointer(ptr, m.id)
+        // Background-preload only top 4 LIVE matches without blocking the UI catalog response
+        val topLiveToWarm = parsedMatches
+            .filter { it.status == MatchStatus.LIVE && playzMatchPointerById.containsKey(it.id) }
+            .take(4)
+
+        if (topLiveToWarm.isNotEmpty()) {
+            scope.launch {
+                for (m in topLiveToWarm) {
+                    runCatching {
+                        val ptr = playzMatchPointerById[m.id] ?: continue
+                        val streams = resolvePlayzStreamsForPointer(ptr, m.id)
+                        if (streams.isNotEmpty()) {
                             playzMatchesById[m.id] = m.copy(
                                 streams = streams,
                                 broadcastChannels = streams.map { it.name }.take(4)
@@ -1015,22 +1015,11 @@ class LivePlaylistMatcherService(
                         }
                     }
                 }
-                runCatching { preloadJobs.awaitAll() }
             }
         }
 
-        val finalMatches = parsedMatches.map { m ->
-            playzMatchesById[m.id] ?: m
-        }
-
-        val parsedHighlights = if (!highlightsJson.isNullOrBlank()) {
-            parsePlayzHighlightsJson(highlightsJson)
-        } else {
-            emptyList()
-        }
-
         PlayzServerCatalog(
-            matches = finalMatches,
+            matches = parsedMatches,
             highlights = parsedHighlights
         )
     }

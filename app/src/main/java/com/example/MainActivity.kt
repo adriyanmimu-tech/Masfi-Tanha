@@ -866,9 +866,18 @@ fun FootballLiveTvApp(
             val detailState = crexState.activeDetailState.takeIf {
                 it.matchId == latestMatch.id.removePrefix("crex-")
             }
+            val matchedHighlight = remember(latestMatch.id, latestMatch.team1Name, latestMatch.team2Name, highlights) {
+                highlights.firstOrNull { hl ->
+                    (hl.team1Name.equals(latestMatch.team1Name, ignoreCase = true) &&
+                        hl.team2Name.equals(latestMatch.team2Name, ignoreCase = true)) ||
+                        (hl.team1Name.equals(latestMatch.team2Name, ignoreCase = true) &&
+                            hl.team2Name.equals(latestMatch.team1Name, ignoreCase = true))
+                }
+            }
             MultipleStreamsModalDialog(
                 streams = pubStreams,
                 currentSelectedStream = pubStreams.firstOrNull(),
+                match = latestMatch,
                 matchTitle = "${latestMatch.team1Name} vs ${latestMatch.team2Name}",
                 matchTournament = latestMatch.tournament,
                 matchStatus = latestMatch.status.name,
@@ -880,6 +889,7 @@ fun FootballLiveTvApp(
                     }
                 },
                 approvedHighlightUrl = latestMatch.approvedHighlightUrl,
+                matchedHighlightItem = matchedHighlight,
                 onWatchHighlight = { highlightUrl ->
                     showStreamPickerModal = false
                     streamPickerMatch = null
@@ -890,6 +900,12 @@ fun FootballLiveTvApp(
                         quality = "HD"
                     )
                     startPlaying(latestMatch, stream.name, listOf(stream))
+                },
+                onWatchHighlightItem = { hl ->
+                    openHighlightModal(hl)
+                },
+                onToggleFavorite = {
+                    repository.toggleMatchFavorite(latestMatch.id)
                 },
                 broadcastChannels = latestMatch.broadcastChannels,
                 onStreamSelected = { selected ->

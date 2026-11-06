@@ -439,9 +439,23 @@ class SportsStreamRepository(
             }
         }
 
-        // Start with zero hardcoded demo matches; live provider feeds populate footballProviderMatches, playzProviderMatches & _crexDashboardState
+        // Load last cached PlayZ matches immediately for 0ms instant startup, then refresh live in background
         footballProviderMatches.clear()
         playzProviderMatches.clear()
+        val cachedPlayzJson = prefs.getString("cached_playz_matches_v1", null)
+        if (!cachedPlayzJson.isNullOrBlank()) {
+            try {
+                val arr = JSONArray(cachedPlayzJson)
+                for (i in 0 until arr.length()) {
+                    val o = arr.optJSONObject(i) ?: continue
+                    val m = deserializeSingleMatch(o)
+                    if (m.id.isNotBlank() && m.id !in LEGACY_DEMO_IDS) {
+                        playzProviderMatches.add(m)
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
         rebuildCombinedMatches()
 
         val savedChannelsJson = prefs.getString("saved_channels_v5", null)
@@ -820,24 +834,25 @@ class SportsStreamRepository(
         }
 
         kotlinx.coroutines.supervisorScope {
-            val playlistDeferred = async {
-                runCatching {
-                    playlistMatcherService.refreshLivePlaylists(force = force, extraM3uUrls = customM3uList)
-                }
-            }
-
             val playzDeferred = async {
                 runCatching {
                     playlistMatcherService.fetchPlayzServerCatalog()
                 }.getOrDefault(com.example.data.playlist.PlayzServerCatalog())
             }
 
-            playlistDeferred.await()
+            // 1. Await PlayZ Server catalog FIRST and immediately publish matches & highlights to UI!
             val playzResult = playzDeferred.await()
             if (playzResult.matches.isNotEmpty()) {
                 synchronized(playzProviderMatches) {
                     playzProviderMatches.clear()
                     playzProviderMatches.addAll(playzResult.matches)
+                }
+                runCatching {
+                    val cacheArr = JSONArray()
+                    playzResult.matches.take(60).forEach { m ->
+                        cacheArr.put(serializeSingleMatch(m))
+                    }
+                    prefs.edit().putString("cached_playz_matches_v1", cacheArr.toString()).apply()
                 }
             }
             if (playzResult.highlights.isNotEmpty()) {
@@ -845,10 +860,16 @@ class SportsStreamRepository(
                 _highlights.value = (customHighlights + playzResult.highlights).distinctBy { it.id }
             }
 
-            // Merge newly discovered live M3U channels into the Channels list without removing Admin/user channels
-            runCatching { syncAutoDiscoveredChannelsIntoList() }
-
             runCatching { rebuildCombinedMatches() }
+
+            // 2. Refresh external M3U playlists in background without blocking initial match rendering
+            launch {
+                runCatching {
+                    playlistMatcherService.refreshLivePlaylists(force = force, extraM3uUrls = customM3uList)
+                    syncAutoDiscoveredChannelsIntoList()
+                    rebuildCombinedMatches()
+                }
+            }
         }
         _crexDashboardState.value.liveState
     }
