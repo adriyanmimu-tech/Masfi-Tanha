@@ -349,20 +349,22 @@ class SportsStreamRepository(
         if (savedConfigJson != null) {
             try {
                 val obj = JSONObject(savedConfigJson)
-                val rawTitle = obj.optString("appTitle", "Sports Live")
+                val rawTitle = obj.optString("appTitle", "PLAYLIVE")
                 val resolvedTitle = if (
                     rawTitle.equals("Football Live Tv", ignoreCase = true) ||
                     rawTitle.equals("SportzX Live TV", ignoreCase = true) ||
-                    rawTitle.equals("NovaStream TV", ignoreCase = true)
-                ) "Sports Live" else rawTitle
+                    rawTitle.equals("NovaStream TV", ignoreCase = true) ||
+                    rawTitle.equals("Sports Live", ignoreCase = true)
+                ) "PLAYLIVE" else rawTitle
                 val rawAnnounce = obj.optString(
                     "announcement",
-                    "Welcome to Sports Live! Enjoy real-time match updates & multi-server HD streams."
+                    "Welcome to PLAYLIVE! Enjoy real-time match updates & multi-server HD streams."
                 )
                 val resolvedAnnounce = rawAnnounce
-                    .replace("Football Live TV", "Sports Live", ignoreCase = true)
-                    .replace("SportzX Live TV", "Sports Live", ignoreCase = true)
-                    .replace("NovaStream TV", "Sports Live", ignoreCase = true)
+                    .replace("Football Live TV", "PLAYLIVE", ignoreCase = true)
+                    .replace("SportzX Live TV", "PLAYLIVE", ignoreCase = true)
+                    .replace("NovaStream TV", "PLAYLIVE", ignoreCase = true)
+                    .replace("Sports Live", "PLAYLIVE", ignoreCase = true)
 
                 val leaguesArr = obj.optJSONArray("enabledFootballLeagues")
                 val enabledLeagues = if (leaguesArr != null && leaguesArr.length() > 0) {
@@ -662,119 +664,93 @@ class SportsStreamRepository(
         val cfg = _config.value
         val state = _crexDashboardState.value
 
-        // Separate provider feeds strictly by SportType & Admin toggle
-        val rawFootball = if (cfg.footballSyncEnabled) {
-            footballProviderMatches.filter { it.sport == SportType.FOOTBALL && it.id !in deletedMatchIds }
-        } else {
-            emptyList()
-        }
-
-        val rawCricket = if (cfg.cricketSyncEnabled) {
-            buildList {
-                addAll(state.liveState.matches)
-                addAll(state.upcomingState.matches)
-                addAll(state.finishedState.matches)
-            }.filter { it.sport == SportType.CRICKET && it.id !in deletedMatchIds }
-                .distinctBy { it.id }
-        } else {
-            emptyList()
-        }
-
+        // Primary 1:1 match catalog directly from PlayZ Server (`pabbdyzone.shop/events.txt`)
         val rawPlayz = synchronized(playzProviderMatches) {
-            playzProviderMatches.filter { it.id !in deletedMatchIds }
-        }
-
-        val existingTeamKeys = HashSet<String>()
-        rawFootball.forEach {
-            existingTeamKeys.add(normalizeTeamPairKey(it.sport, it.team1Name, it.team2Name))
-        }
-        rawCricket.forEach {
-            existingTeamKeys.add(normalizeTeamPairKey(it.sport, it.team1Name, it.team2Name))
-        }
-
-        val additionalPlayzMatches = rawPlayz.filter { pm ->
-            when (pm.sport) {
-                SportType.FOOTBALL -> cfg.footballSyncEnabled &&
-                    normalizeTeamPairKey(pm.sport, pm.team1Name, pm.team2Name) !in existingTeamKeys
-                SportType.CRICKET -> cfg.cricketSyncEnabled &&
-                    normalizeTeamPairKey(pm.sport, pm.team1Name, pm.team2Name) !in existingTeamKeys
-                else -> true
+            playzProviderMatches.filter { pm ->
+                pm.id !in deletedMatchIds && when (pm.sport) {
+                    SportType.FOOTBALL -> cfg.footballSyncEnabled
+                    SportType.CRICKET -> cfg.cricketSyncEnabled
+                    else -> true
+                }
             }
         }
 
-        // Automatically enrich every provider match with live playlist streams & broadcast channel schedule ("কোনটায় কখন খেলা")
-        val allProviderMatches = (rawFootball + rawCricket + additionalPlayzMatches).map { m ->
+        // Preserve any standalone Admin-created custom matches that are not part of provider feeds
+        val playzIds = rawPlayz.map { it.id }.toHashSet()
+        val standaloneAdminMatches = cloudMatchOverrides.values.filter { ov ->
+            ov.id !in playzIds &&
+                ov.id !in deletedMatchIds &&
+                ov.id !in LEGACY_DEMO_IDS &&
+                !ov.id.startsWith("old-provider-") &&
+                ov.provider == "ADMIN"
+        }
+
+        val allProviderMatches = (standaloneAdminMatches + rawPlayz).map { m ->
             playlistMatcherService.enrichMatchWithAutoPlaylistStreams(m)
         }
         val enrichedMatches = reconcileAndApplyAssociations(allProviderMatches)
 
-        val fbMatches = enrichedMatches.filter { it.sport == SportType.FOOTBALL }
         val cricMatches = enrichedMatches.filter { it.sport == SportType.CRICKET }
-        val otherSportMatches = enrichedMatches.filter {
-            it.sport != SportType.FOOTBALL && it.sport != SportType.CRICKET
-        }
 
-        // Keep CrexDashboardState buckets updated with favourites & overrides
+        // Keep CrexDashboardState buckets synced with PlayZ Cricket matches
         _crexDashboardState.value = state.copy(
-            liveState = state.liveState.copy(matches = cricMatches.filter { it.status == MatchStatus.LIVE }),
+            liveState = state.liveState.copy(
+                isLoading = false,
+                errorMessage = null,
+                matches = cricMatches.filter { it.status == MatchStatus.LIVE }
+            ),
             upcomingState = state.upcomingState.copy(
+                isLoading = false,
+                errorMessage = null,
                 matches = cricMatches.filter { it.status == MatchStatus.UPCOMING || it.status == MatchStatus.UNKNOWN }
             ),
-            finishedState = state.finishedState.copy(matches = cricMatches.filter { it.status == MatchStatus.FINISHED })
+            finishedState = state.finishedState.copy(
+                isLoading = false,
+                errorMessage = null,
+                matches = cricMatches.filter { it.status == MatchStatus.FINISHED }
+            )
         )
 
-        // Order: LIVE first, then UPCOMING, then FINISHED, then UNKNOWN
-        val combined = buildList {
-            addAll(fbMatches.filter { it.status == MatchStatus.LIVE })
-            addAll(cricMatches.filter { it.status == MatchStatus.LIVE })
-            addAll(otherSportMatches.filter { it.status == MatchStatus.LIVE })
-            addAll(fbMatches.filter { it.status == MatchStatus.UPCOMING })
-            addAll(cricMatches.filter { it.status == MatchStatus.UPCOMING })
-            addAll(otherSportMatches.filter { it.status == MatchStatus.UPCOMING })
-            addAll(fbMatches.filter { it.status == MatchStatus.FINISHED })
-            addAll(cricMatches.filter { it.status == MatchStatus.FINISHED })
-            addAll(otherSportMatches.filter { it.status == MatchStatus.FINISHED })
-            addAll(fbMatches.filter { it.status == MatchStatus.UNKNOWN })
-            addAll(cricMatches.filter { it.status == MatchStatus.UNKNOWN })
-            addAll(otherSportMatches.filter { it.status == MatchStatus.UNKNOWN })
-        }.distinctBy { "${it.sport.name}_${it.id}" }
+        // Order exactly like the reference app:
+        // 1. LIVE matches (in server priority order)
+        // 2. UPCOMING matches (sorted by start time ascending so soonest match is first)
+        // 3. FINISHED matches (sorted by start time descending so most recent is first)
+        val liveList = enrichedMatches.filter { it.status == MatchStatus.LIVE }
+        val upcomingList = enrichedMatches
+            .filter { it.status == MatchStatus.UPCOMING || it.status == MatchStatus.UNKNOWN }
+            .sortedBy { if (it.startTimeEpochMs > 0L) it.startTimeEpochMs else Long.MAX_VALUE }
+        val finishedList = enrichedMatches
+            .filter { it.status == MatchStatus.FINISHED }
+            .sortedByDescending { it.startTimeEpochMs }
+
+        val combined = (liveList + upcomingList + finishedList)
+            .distinctBy { "${it.sport.name}_${it.id}" }
 
         _matches.value = combined
         refreshDiagnosticsSnapshot()
     }
 
     /**
-     * Refreshes Football matches from verified ESPN Soccer Scoreboard endpoints.
+     * Refreshes Football matches from the PlayZ Server catalog.
      */
     suspend fun refreshFootballMatches(force: Boolean = false): List<LiveMatch> = withContext(Dispatchers.IO) {
         val cfg = _config.value
         if (!cfg.footballSyncEnabled) {
-            footballProviderMatches.clear()
             rebuildCombinedMatches()
             return@withContext emptyList()
         }
-        val playlistJob = async { playlistMatcherService.refreshLivePlaylists(force = force) }
-        val feedResult = espnService.fetchScoreboardMatches(
-            enabledLeagues = cfg.enabledFootballLeagues,
-            forceRefresh = force
-        )
-        playlistJob.await()
-        synchronized(footballProviderMatches) {
-            footballProviderMatches.clear()
-            footballProviderMatches.addAll(feedResult.matches)
-        }
-        rebuildCombinedMatches()
+        refreshLiveMatches(force = force)
         _matches.value.filter { it.sport == SportType.FOOTBALL }
     }
 
     /**
-     * Refreshes all Cricket categories (Live, Upcoming, Finished), Football matches (ESPN),
-     * and the auto-updating live M3U Sports Playlists concurrently.
+     * Refreshes all live, upcoming, and finished matches directly from the PlayZ Server
+     * (`pabbdyzone.shop/events.txt` & `highlights.txt`) and live M3U Sports Playlists.
      */
     suspend fun refreshLiveMatches(force: Boolean = false): CrexCategoryFeedState = withContext(Dispatchers.IO) {
         val cfg = _config.value
         val current = _crexDashboardState.value.liveState
-        if (current.matches.isEmpty() && cfg.cricketSyncEnabled) {
+        if (_matches.value.isEmpty()) {
             _crexDashboardState.value = _crexDashboardState.value.copy(
                 liveState = current.copy(isLoading = true, errorMessage = null)
             )
@@ -799,29 +775,6 @@ class SportsStreamRepository(
                 }.getOrDefault(com.example.data.playlist.PlayzServerCatalog())
             }
 
-            val fbDeferred = async {
-                runCatching {
-                    if (cfg.footballSyncEnabled) {
-                        espnService.fetchScoreboardMatches(
-                            enabledLeagues = cfg.enabledFootballLeagues,
-                            forceRefresh = force
-                        )
-                    } else {
-                        null
-                    }
-                }.getOrNull()
-            }
-
-            val cricDeferred = async {
-                runCatching {
-                    if (cfg.cricketSyncEnabled) {
-                        crexService.fetchSynchronizedDashboard(forceRefresh = force)
-                    } else {
-                        CrexDashboardState()
-                    }
-                }.getOrDefault(_crexDashboardState.value)
-            }
-
             playlistDeferred.await()
             val playzResult = playzDeferred.await()
             if (playzResult.matches.isNotEmpty()) {
@@ -835,23 +788,6 @@ class SportsStreamRepository(
                     .distinctBy { it.title.lowercase(Locale.US) }
                 _highlights.value = mergedHighlights
             }
-
-            val fbResult = fbDeferred.await()
-            if (fbResult != null) {
-                synchronized(footballProviderMatches) {
-                    footballProviderMatches.clear()
-                    footballProviderMatches.addAll(fbResult.matches)
-                }
-            } else if (!cfg.footballSyncEnabled) {
-                synchronized(footballProviderMatches) {
-                    footballProviderMatches.clear()
-                }
-            }
-
-            val synchronizedCric = cricDeferred.await()
-            _crexDashboardState.value = synchronizedCric.copy(
-                activeDetailState = _crexDashboardState.value.activeDetailState
-            )
 
             // Merge newly discovered live M3U channels into the Channels list without removing Admin/user channels
             runCatching { syncAutoDiscoveredChannelsIntoList() }

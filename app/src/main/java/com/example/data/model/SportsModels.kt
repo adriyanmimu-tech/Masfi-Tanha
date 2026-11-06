@@ -73,9 +73,9 @@ data class UnmappedAssociationNotice(
 )
 
 data class AppConfig(
-    val appTitle: String = "Sports Live",
+    val appTitle: String = "PLAYLIVE",
     val version: String = "9.0",
-    val announcement: String = "Welcome to Sports Live! Ultra HD multi-server live sports streams are active.",
+    val announcement: String = "Welcome to PLAYLIVE! All Sports • Live • Anytime • Anywhere in Ultra HD.",
     val telegramLink: String = "https://t.me/sports_live_streams",
     val adminPin: String = "1234",
     val forceLowQuality: Boolean = false,

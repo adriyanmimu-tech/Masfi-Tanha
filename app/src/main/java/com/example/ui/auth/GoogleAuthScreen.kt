@@ -222,7 +222,7 @@ fun signOut(
 
 @Composable
 fun AuthGateScreen(
-    appTitle: String = "Sports Live",
+    appTitle: String = "PLAYLIVE",
     onAuthSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -276,16 +276,15 @@ fun AuthGateScreen(
                     modifier = Modifier
                         .size(92.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(Color.White)
-                        .border(1.5.dp, Color(0xFFFF5722), RoundedCornerShape(22.dp)),
+                        .background(Color(0xFF060B1E))
+                        .border(1.5.dp, Color(0xFFFF3D00), RoundedCornerShape(22.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_app_logo),
                         contentDescription = appTitle,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(4.dp)
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 

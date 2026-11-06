@@ -1,6 +1,6 @@
 {
-  "name": "Sports Live",
-  "description": "Live cricket, football, boxing, and motorsport streaming app with multi-server HD streams and cloud control.",
+  "name": "PLAYLIVE",
+  "description": "PLAYLIVE — Live cricket, football, boxing, basketball, and motorsport streaming app with multi-server HD streams and cloud control.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

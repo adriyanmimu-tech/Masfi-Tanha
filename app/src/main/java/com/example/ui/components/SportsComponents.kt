@@ -46,10 +46,16 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import coil.request.ImageRequest
+import com.example.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopSportsBar(
-    title: String = "Sports Live",
+    title: String = "PLAYLIVE",
     onTelegramClick: () -> Unit,
     onRefreshClick: () -> Unit,
     onSearchClick: () -> Unit,
@@ -117,14 +123,28 @@ fun TopSportsBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        fontSize = 20.sp
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_app_logo),
+                        contentDescription = "PLAYLIVE Logo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(RoundedCornerShape(8.dp))
                     )
-                )
+                    Text(
+                        text = title.ifBlank { "PLAYLIVE" },
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -842,18 +862,31 @@ fun TeamFlagBadge(
     teamName: String = "",
     isNationalTeam: Boolean = true
 ) {
-    val resolved = remember(flag, code, flagUrl, emoji, teamName, isNationalTeam) {
+    val context = LocalContext.current
+    val effectiveIsNational = remember(teamName, code, isNationalTeam) {
+        isNationalTeam || TeamFlagResolver.isRecognizedNationalTeam(teamName, code)
+    }
+    val resolved = remember(flag, code, flagUrl, emoji, teamName, effectiveIsNational) {
         val lookupVisual = TeamFlagResolver.resolveForMatch(
             teamName = teamName.ifBlank { code },
             teamCode = code,
             existingFlag = flagUrl.ifBlank { flag },
-            isNationalTeam = isNationalTeam
+            isNationalTeam = effectiveIsNational
         )
+        val primary = TeamFlagResolver.sanitizeFlagOrLogoUrl(flagUrl.ifBlank { flag }).let { raw ->
+            if (raw.isNotBlank() && !raw.endsWith(".svg", ignoreCase = true)) raw else lookupVisual.flagUrl
+        }
+        val secondary = if (lookupVisual.flagUrl.isNotBlank() && lookupVisual.flagUrl != primary) {
+            lookupVisual.flagUrl
+        } else {
+            lookupVisual.fallbackFlagUrl
+        }
         TeamFlagResolver.TeamVisual(
             code = code.ifBlank { lookupVisual.code },
-            flagUrl = flagUrl.ifBlank { lookupVisual.flagUrl },
+            flagUrl = primary,
             emoji = emoji.ifBlank { lookupVisual.emoji },
-            countryName = lookupVisual.countryName
+            countryName = lookupVisual.countryName,
+            fallbackFlagUrl = secondary
         )
     }
 
@@ -877,9 +910,31 @@ fun TeamFlagBadge(
             )
         }
     } else {
-        var imageLoadFailed by remember(resolved.flagUrl) { mutableStateOf(false) }
-        val hasRemoteUrl = (resolved.flagUrl.startsWith("http://", ignoreCase = true) ||
-            resolved.flagUrl.startsWith("https://", ignoreCase = true)) && !imageLoadFailed
+        var useFallbackUrl by remember(resolved.flagUrl, resolved.fallbackFlagUrl) { mutableStateOf(false) }
+        var imageLoadFailed by remember(resolved.flagUrl, resolved.fallbackFlagUrl) { mutableStateOf(false) }
+
+        val activeRemoteUrl = if (useFallbackUrl && resolved.fallbackFlagUrl.isNotBlank()) {
+            resolved.fallbackFlagUrl
+        } else {
+            resolved.flagUrl
+        }
+        val hasRemoteUrl = (activeRemoteUrl.startsWith("http://", ignoreCase = true) ||
+            activeRemoteUrl.startsWith("https://", ignoreCase = true)) && !imageLoadFailed
+
+        val imageRequest = remember(context, activeRemoteUrl) {
+            if (activeRemoteUrl.isNotBlank()) {
+                ImageRequest.Builder(context)
+                    .data(activeRemoteUrl)
+                    .addHeader(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36"
+                    )
+                    .crossfade(true)
+                    .build()
+            } else {
+                null
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -888,14 +943,13 @@ fun TeamFlagBadge(
                 .background(Color(0xFF1C2739))
                 .border(
                     width = 1.dp,
-                    color = if (!isNationalTeam) Color(0xFF2D3F5B) else Color.Transparent,
+                    color = if (!effectiveIsNational) Color(0xFF2D3F5B) else Color(0xFF2A3B56),
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Clean fallback badge if logo/flag is missing or fails to load
             if (!hasRemoteUrl) {
-                if (isNationalTeam && resolved.emoji.isNotBlank() && resolved.emoji != "🏳️") {
+                if (effectiveIsNational && resolved.emoji.isNotBlank() && resolved.emoji != "🏳️") {
                     Text(text = resolved.emoji, fontSize = 22.sp)
                 } else {
                     Text(
@@ -909,16 +963,22 @@ fun TeamFlagBadge(
                 }
             }
 
-            if (hasRemoteUrl) {
+            if (hasRemoteUrl && imageRequest != null) {
                 AsyncImage(
-                    model = resolved.flagUrl,
+                    model = imageRequest,
                     contentDescription = teamName.ifBlank { resolved.code },
-                    contentScale = if (isNationalTeam) ContentScale.Crop else ContentScale.Fit,
-                    onError = { imageLoadFailed = true },
+                    contentScale = if (effectiveIsNational) ContentScale.Crop else ContentScale.Fit,
+                    onError = {
+                        if (!useFallbackUrl && resolved.fallbackFlagUrl.isNotBlank() && resolved.fallbackFlagUrl != resolved.flagUrl) {
+                            useFallbackUrl = true
+                        } else {
+                            imageLoadFailed = true
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(if (isNationalTeam) 0.dp else 4.dp)
-                        .clip(if (isNationalTeam) CircleShape else RoundedCornerShape(4.dp))
+                        .padding(if (effectiveIsNational) 0.dp else 4.dp)
+                        .clip(if (effectiveIsNational) CircleShape else RoundedCornerShape(4.dp))
                 )
             }
         }

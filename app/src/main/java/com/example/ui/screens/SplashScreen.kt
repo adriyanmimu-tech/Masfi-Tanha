@@ -70,17 +70,17 @@ fun SplashScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
         ) {
-            // App Logo Box displaying the exact uploaded Sports Live icon
+            // App Logo Box displaying the PLAYLIVE icon
             Box(
                 modifier = Modifier
                     .scale(scale)
-                    .size(132.dp)
+                    .size(136.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White)
+                    .background(Color(0xFF060B1E))
                     .border(
                         width = 2.dp,
                         brush = Brush.linearGradient(
-                            colors = listOf(Color(0xFFFF5722), Color(0xFFE53935), CyanAccent)
+                            colors = listOf(Color(0xFFFF3D00), Color(0xFFE53935), CyanAccent)
                         ),
                         shape = RoundedCornerShape(28.dp)
                     )
@@ -89,10 +89,9 @@ fun SplashScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_app_logo),
-                    contentDescription = "Sports Live Logo",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(6.dp)
+                    contentDescription = "PLAYLIVE Logo",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -114,7 +113,7 @@ fun SplashScreen(
 
             // Subtitle
             Text(
-                text = "ULTRA HD LIVE SPORTS & BROADCAST",
+                text = "ALL SPORTS • LIVE • ANYTIME • ANYWHERE",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     color = GoldYellow,
                     fontWeight = FontWeight.Bold,
