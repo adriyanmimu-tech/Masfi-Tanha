@@ -41,10 +41,14 @@ class SportsStreamRepository(
     val espnService: EspnFootballService = EspnFootballService(),
     val sofascoreService: SofaScoreMetadataService = SofaScoreMetadataService(),
     val playlistMatcherService: LivePlaylistMatcherService = LivePlaylistMatcherService(),
-    val cloudSyncRepository: CloudSyncRepository? = runCatching { CloudSyncRepository(context) }.getOrNull()
+    val cloudSyncRepository: CloudSyncRepository? = runCatching {
+        if (com.google.firebase.FirebaseApp.getApps(context).isNotEmpty()) CloudSyncRepository(context) else null
+    }.getOrNull()
 ) {
     private fun isFirebaseSignedIn(): Boolean =
-        runCatching { Firebase.auth.currentUser != null }.getOrDefault(false)
+        runCatching {
+            com.google.firebase.FirebaseApp.getApps(context).isNotEmpty() && Firebase.auth.currentUser != null
+        }.getOrDefault(false)
 
     companion object {
         // Legacy demo fixture IDs that must never be rendered as standalone fixtures
@@ -782,68 +786,78 @@ class SportsStreamRepository(
             emptyList()
         }
 
-        val playlistDeferred = async {
-            playlistMatcherService.refreshLivePlaylists(force = force, extraM3uUrls = customM3uList)
-        }
-
-        val playzDeferred = async {
-            playlistMatcherService.fetchPlayzServerCatalog()
-        }
-
-        val fbDeferred = async {
-            if (cfg.footballSyncEnabled) {
-                espnService.fetchScoreboardMatches(
-                    enabledLeagues = cfg.enabledFootballLeagues,
-                    forceRefresh = force
-                )
-            } else {
-                null
+        kotlinx.coroutines.supervisorScope {
+            val playlistDeferred = async {
+                runCatching {
+                    playlistMatcherService.refreshLivePlaylists(force = force, extraM3uUrls = customM3uList)
+                }
             }
-        }
 
-        val cricDeferred = async {
-            if (cfg.cricketSyncEnabled) {
-                crexService.fetchSynchronizedDashboard(forceRefresh = force)
-            } else {
-                CrexDashboardState()
+            val playzDeferred = async {
+                runCatching {
+                    playlistMatcherService.fetchPlayzServerCatalog()
+                }.getOrDefault(com.example.data.playlist.PlayzServerCatalog())
             }
-        }
 
-        playlistDeferred.await()
-        val playzResult = playzDeferred.await()
-        if (playzResult.matches.isNotEmpty()) {
-            synchronized(playzProviderMatches) {
-                playzProviderMatches.clear()
-                playzProviderMatches.addAll(playzResult.matches)
+            val fbDeferred = async {
+                runCatching {
+                    if (cfg.footballSyncEnabled) {
+                        espnService.fetchScoreboardMatches(
+                            enabledLeagues = cfg.enabledFootballLeagues,
+                            forceRefresh = force
+                        )
+                    } else {
+                        null
+                    }
+                }.getOrNull()
             }
-        }
-        if (playzResult.highlights.isNotEmpty()) {
-            val mergedHighlights = (playzResult.highlights + _highlights.value)
-                .distinctBy { it.title.lowercase(Locale.US) }
-            _highlights.value = mergedHighlights
-        }
 
-        val fbResult = fbDeferred.await()
-        if (fbResult != null) {
-            synchronized(footballProviderMatches) {
-                footballProviderMatches.clear()
-                footballProviderMatches.addAll(fbResult.matches)
+            val cricDeferred = async {
+                runCatching {
+                    if (cfg.cricketSyncEnabled) {
+                        crexService.fetchSynchronizedDashboard(forceRefresh = force)
+                    } else {
+                        CrexDashboardState()
+                    }
+                }.getOrDefault(_crexDashboardState.value)
             }
-        } else {
-            synchronized(footballProviderMatches) {
-                footballProviderMatches.clear()
+
+            playlistDeferred.await()
+            val playzResult = playzDeferred.await()
+            if (playzResult.matches.isNotEmpty()) {
+                synchronized(playzProviderMatches) {
+                    playzProviderMatches.clear()
+                    playzProviderMatches.addAll(playzResult.matches)
+                }
             }
+            if (playzResult.highlights.isNotEmpty()) {
+                val mergedHighlights = (playzResult.highlights + _highlights.value)
+                    .distinctBy { it.title.lowercase(Locale.US) }
+                _highlights.value = mergedHighlights
+            }
+
+            val fbResult = fbDeferred.await()
+            if (fbResult != null) {
+                synchronized(footballProviderMatches) {
+                    footballProviderMatches.clear()
+                    footballProviderMatches.addAll(fbResult.matches)
+                }
+            } else if (!cfg.footballSyncEnabled) {
+                synchronized(footballProviderMatches) {
+                    footballProviderMatches.clear()
+                }
+            }
+
+            val synchronizedCric = cricDeferred.await()
+            _crexDashboardState.value = synchronizedCric.copy(
+                activeDetailState = _crexDashboardState.value.activeDetailState
+            )
+
+            // Merge newly discovered live M3U channels into the Channels list without removing Admin/user channels
+            runCatching { syncAutoDiscoveredChannelsIntoList() }
+
+            runCatching { rebuildCombinedMatches() }
         }
-
-        val synchronizedCric = cricDeferred.await()
-        _crexDashboardState.value = synchronizedCric.copy(
-            activeDetailState = _crexDashboardState.value.activeDetailState
-        )
-
-        // Merge newly discovered live M3U channels into the Channels list without removing Admin/user channels
-        syncAutoDiscoveredChannelsIntoList()
-
-        rebuildCombinedMatches()
         _crexDashboardState.value.liveState
     }
 
@@ -953,10 +967,16 @@ class SportsStreamRepository(
                 }
                 val mergedStreams = (resolvedPlayzStreams + nonPlaceholderExisting)
                     .distinctBy { "${it.url}|${it.drmLicense.orEmpty()}" }
+                    .sortedWith(
+                        compareBy<StreamSource> {
+                            !it.drmLicense.isNullOrBlank() || it.url.substringBefore("|").contains(".mpd", ignoreCase = true)
+                        }
+                    )
                     .mapIndexed { idx, s ->
                         s.copy(
                             isDefault = idx == 0,
-                            priorityOrder = idx + 1
+                            priorityOrder = idx + 1,
+                            isBackup = false
                         )
                     }
                 val updated = currentMatch.copy(streams = mergedStreams)

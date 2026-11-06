@@ -1,0 +1,149 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Debug & Signed Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Android SDK & Accept Licenses
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Prepare Environment & Keystores
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD_SECRET: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD_SECRET: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Ensure .env exists from .env.example for Secrets Gradle Plugin
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+          # 2. Restore debug.keystore from debug.keystore.base64 (or generate fallback)
+          if [ ! -f "debug.keystore" ]; then
+            if [ -f "debug.keystore.base64" ]; then
+              base64 -d debug.keystore.base64 > debug.keystore || base64 --decode debug.keystore.base64 > debug.keystore
+            else
+              keytool -genkeypair -v \
+                -keystore debug.keystore \
+                -storepass android \
+                -alias androiddebugkey \
+                -keypass android \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
+          fi
+
+          # 3. Prepare Release Keystore (uses GitHub Secret if set, otherwise auto-generates upload key)
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > my-upload-key.jks
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${STORE_PASSWORD_SECRET:-android123}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${KEY_PASSWORD_SECRET:-android123}" >> $GITHUB_ENV
+          else
+            if [ ! -f "my-upload-key.jks" ]; then
+              keytool -genkeypair -v \
+                -keystore my-upload-key.jks \
+                -storepass android123 \
+                -alias upload \
+                -keypass android123 \
+                -keyalg RSA \
+                -keysize 2048 \
+                -validity 10000 \
+                -dname "CN=Sports Live,OU=Mobile,O=SportsLive,L=Dhaka,S=Dhaka,C=BD"
+            fi
+            echo "KEYSTORE_PATH=${GITHUB_WORKSPACE}/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=android123" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android123" >> $GITHUB_ENV
+          fi
+
+      - name: Build Debug & Release APKs
+        run: |
+          gradle :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Prepare Output APKs
+        run: |
+          mkdir -p dist-apk
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk dist-apk/Sports-Live-Debug.apk
+          fi
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            cp app/build/outputs/apk/release/app-release.apk dist-apk/Sports-Live-Release.apk
+          fi
+          ls -lh dist-apk/
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sports-Live-Debug-APK
+          path: dist-apk/Sports-Live-Debug.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Signed Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sports-Live-Release-APK
+          path: dist-apk/Sports-Live-Release.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish APK to GitHub Releases
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.1.${{ github.run_number }}
+          name: "Sports Live APK v1.1.${{ github.run_number }}"
+          body: |
+            ### 📺 Sports Live - Automated APK Build
+            - **Sports-Live-Release.apk**: Signed Release APK (Ready to install)
+            - **Sports-Live-Debug.apk**: Debug APK
+          files: |
+            dist-apk/Sports-Live-Release.apk
+            dist-apk/Sports-Live-Debug.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (playerManager.isPlaying.value) {
+        if (::playerManager.isInitialized && playerManager.isPlaying.value) {
             triggerPictureInPicture()
         }
     }
@@ -109,7 +109,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        playerManager.release()
+        if (::playerManager.isInitialized) {
+            playerManager.release()
+        }
     }
 }
 
@@ -125,30 +127,42 @@ fun FootballLiveTvApp(
     val snackbarHostState = remember { SnackbarHostState() }
     val credentialManager = remember(context) { CredentialManager.create(context) }
 
-    val authFlow = remember {
-        runCatching { Firebase.auth.authStateFlow() }.getOrElse { kotlinx.coroutines.flow.flowOf(null) }
+    val authFlow = remember(context) {
+        if (com.example.ui.auth.isFirebaseReady(context)) {
+            runCatching { Firebase.auth.authStateFlow() }.getOrElse { kotlinx.coroutines.flow.flowOf(null) }
+        } else {
+            kotlinx.coroutines.flow.flowOf(null)
+        }
     }
-    val initialUser = remember { runCatching { Firebase.auth.currentUser }.getOrNull() }
+    val initialUser = remember(context) {
+        if (com.example.ui.auth.isFirebaseReady(context)) {
+            runCatching { Firebase.auth.currentUser }.getOrNull()
+        } else {
+            null
+        }
+    }
     val currentUser by authFlow.collectAsState(initial = initialUser)
 
     LaunchedEffect(Unit) {
-        if (currentUser == null) {
-            attemptAutoSignIn(
-                context = context,
-                credentialManager = credentialManager,
-                onAuthSuccess = {},
-                onUnauthenticated = {},
-                scope = coroutineScope
-            )
+        if (currentUser == null && com.example.ui.auth.isFirebaseReady(context)) {
+            runCatching {
+                attemptAutoSignIn(
+                    context = context,
+                    credentialManager = credentialManager,
+                    onAuthSuccess = {},
+                    onUnauthenticated = {},
+                    scope = coroutineScope
+                )
+            }
         }
     }
 
     LaunchedEffect(currentUser?.uid) {
         val uid = currentUser?.uid
         if (uid != null) {
-            repository.startCloudSyncForUser(uid)
+            runCatching { repository.startCloudSyncForUser(uid) }
         } else {
-            repository.stopCloudSync()
+            runCatching { repository.stopCloudSync() }
         }
     }
 
@@ -278,7 +292,7 @@ fun FootballLiveTvApp(
     ) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                repository.refreshLiveMatches(force = false)
+                runCatching { repository.refreshLiveMatches(force = false) }
                 val intervalMs = config.autoRefreshIntervalSec.coerceIn(15, 120) * 1000L
                 delay(intervalMs)
             }
@@ -288,7 +302,7 @@ fun FootballLiveTvApp(
     // 2. Refresh when status filter or scores dialog is explicitly toggled
     LaunchedEffect(selectedStatus, showScoresDialog) {
         if (selectedStatus == MatchStatus.FINISHED || showScoresDialog) {
-            repository.refreshFinishedMatches(force = false)
+            runCatching { repository.refreshFinishedMatches(force = false) }
         }
     }
 

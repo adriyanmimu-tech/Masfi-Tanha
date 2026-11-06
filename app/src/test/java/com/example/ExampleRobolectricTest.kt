@@ -31,9 +31,9 @@ class ExampleRobolectricTest {
 
     @Test
     fun `mainActivity launches without crash`() {
-        val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java).create()
+        val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java).setup()
         assertNotNull(controller.get())
-        controller.destroy()
+        controller.pause().stop().destroy()
     }
 
     @Test

@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -843,14 +844,20 @@ class LivePlaylistMatcherService(
                         url = rawLink,
                         drmLicense = drmLicense,
                         drmScheme = if (drmLicense != null) "clearkey" else null,
-                        isDefault = list.isEmpty(),
+                        isDefault = false,
                         isEnabled = true,
                         priorityOrder = i + 1,
                         isBackup = false
                     )
                 )
             }
-            list
+            // Prioritize direct .m3u8 HLS streams ahead of .mpd DRM streams so playback works on all devices & emulators
+            list.sortedWith(
+                compareBy<StreamSource> { !it.drmLicense.isNullOrBlank() || it.url.substringBefore("|").contains(".mpd", true) }
+                    .thenBy { it.priorityOrder }
+            ).mapIndexed { idx, s ->
+                s.copy(isDefault = idx == 0, priorityOrder = idx + 1)
+            }
         } catch (_: Exception) {
             emptyList()
         }
@@ -873,21 +880,26 @@ class LivePlaylistMatcherService(
             emptyList()
         }
 
-        // Pre-resolve the top live/priority matches' `pro/<id>.txt` streams concurrently so tapping any card has instant streams
+        // Pre-resolve the top live matches' `pro/<id>.txt` streams concurrently so tapping any live card has instant streams
         val topMatchesToPreload = parsedMatches
             .filter { playzMatchPointerById.containsKey(it.id) }
-            .take(18)
+            .sortedByDescending { it.status == MatchStatus.LIVE }
+            .take(8)
 
-        val preloadJobs = topMatchesToPreload.map { m ->
-            async {
-                val ptr = playzMatchPointerById[m.id] ?: return@async
-                val streams = resolvePlayzStreamsForPointer(ptr, m.id)
-                if (streams.isNotEmpty()) {
-                    playzMatchesById[m.id] = m.copy(streams = streams)
+        kotlinx.coroutines.supervisorScope {
+            val preloadJobs = topMatchesToPreload.map { m ->
+                async {
+                    runCatching {
+                        val ptr = playzMatchPointerById[m.id] ?: return@async
+                        val streams = resolvePlayzStreamsForPointer(ptr, m.id)
+                        if (streams.isNotEmpty()) {
+                            playzMatchesById[m.id] = m.copy(streams = streams)
+                        }
+                    }
                 }
             }
+            runCatching { preloadJobs.awaitAll() }
         }
-        runCatching { preloadJobs.awaitAll() }
 
         val finalMatches = parsedMatches.map { m ->
             playzMatchesById[m.id] ?: m
@@ -973,7 +985,7 @@ class LivePlaylistMatcherService(
                     else -> MatchStatus.UPCOMING
                 }
 
-                val matchId = "pz-${(eventName + "_" + teamA + "_" + teamB + "_" + dateStr).hashCode().toUInt()}"
+                val matchId = "pz-$i-${(eventName + "_" + teamA + "_" + teamB + "_" + dateStr + "_" + linksPointer).hashCode().toUInt()}"
                 if (linksPointer.isNotBlank()) {
                     playzMatchPointerById[matchId] = linksPointer
                 }
@@ -1375,16 +1387,20 @@ class LivePlaylistMatcherService(
         }
     }
 
-    private suspend fun probeSeedStreamsConcurrently() {
-        val probeJobs = VERIFIED_LIVE_SEED_ENTRIES.map { entry ->
-            scope.async {
-                val cached = streamHealthMap[entry.url]
-                if (cached != null) return@async
-                val isOnline = checkStreamUrlAlive(entry.url)
-                streamHealthMap[entry.url] = isOnline
+    private fun probeSeedStreamsConcurrently() {
+        scope.launch {
+            for (batch in VERIFIED_LIVE_SEED_ENTRIES.chunked(6)) {
+                val probeJobs = batch.map { entry ->
+                    async {
+                        val cached = streamHealthMap[entry.url]
+                        if (cached != null) return@async
+                        val isOnline = checkStreamUrlAlive(entry.url)
+                        streamHealthMap[entry.url] = isOnline
+                    }
+                }
+                runCatching { probeJobs.awaitAll() }
             }
         }
-        runCatching { probeJobs.awaitAll() }
     }
 
     private fun checkStreamUrlAlive(url: String): Boolean {
@@ -1642,7 +1658,8 @@ class LivePlaylistMatcherService(
             val resolvedPro = if (pointer != null) playzResolvedStreamsByPointer[pointer] else null
             val sourceStreams = resolvedPro?.takeIf { it.isNotEmpty() } ?: matchedPlayzEvent.streams
             for (ps in sourceStreams) {
-                if (ps.url.isNotBlank() && dedicatedMatchStreams.none { it.url == ps.url && it.name == ps.name }) {
+                val isRawTxtPointer = ps.url.contains("pro/") && ps.url.endsWith(".txt", ignoreCase = true)
+                if (ps.url.isNotBlank() && !isRawTxtPointer && dedicatedMatchStreams.none { it.url == ps.url && it.name == ps.name }) {
                     dedicatedMatchStreams.add(
                         ps.copy(
                             id = "${match.id}-${ps.id}",
@@ -1994,7 +2011,23 @@ class LivePlaylistMatcherService(
             )
         }
 
-        val combinedStreams = (dedicatedMatchStreams + channelFallbackStreams).distinctBy { "${it.name}_${it.url}" }
+        val rawCombined = (dedicatedMatchStreams + channelFallbackStreams)
+            .distinctBy { "${it.name}_${it.url}" }
+
+        // Put non-DRM .m3u8 streams ahead of .mpd DRM streams so default server plays cleanly without DrmHalHidl/CryptoHalHidl errors
+        val combinedStreams = rawCombined
+            .sortedWith(
+                compareBy<StreamSource> { !it.drmLicense.isNullOrBlank() || it.url.substringBefore("|").contains(".mpd", true) }
+                    .thenBy { it.isBackup }
+                    .thenBy { it.priorityOrder }
+            )
+            .mapIndexed { idx, s ->
+                s.copy(
+                    isDefault = idx == 0,
+                    priorityOrder = idx + 1,
+                    isBackup = idx >= 6 && s.isBackup
+                )
+            }
 
         val finalBroadcastList = if (broadcastBadgeNames.isNotEmpty()) {
             broadcastBadgeNames.take(4)

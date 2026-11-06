@@ -461,7 +461,7 @@ fun AdminPanelScreen(
                                 context = context,
                                 credentialManager = credentialManager,
                                 onAuthSuccess = {
-                                    val uid = Firebase.auth.currentUser?.uid
+                                    val uid = runCatching { Firebase.auth.currentUser?.uid }.getOrNull()
                                     if (uid != null) repository.startCloudSyncForUser(uid)
                                     pushUpdatesToAllUsers("Google Admin সংযুক্ত হয়েছে এবং ক্লাউড সিঙ্ক চালু হয়েছে!")
                                 },
