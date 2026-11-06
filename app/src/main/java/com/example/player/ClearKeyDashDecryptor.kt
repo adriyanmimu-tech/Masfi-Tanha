@@ -408,6 +408,10 @@ object ClearKeyDashDecryptor {
         }
     }
 
+    private val aesCtrCipherThreadLocal = object : ThreadLocal<Cipher>() {
+        override fun initialValue(): Cipher = Cipher.getInstance("AES/CTR/NoPadding")
+    }
+
     private fun decryptSamplesWithSenc(
         data: ByteArray,
         sencPos: Int,
@@ -438,7 +442,7 @@ object ClearKeyDashDecryptor {
             preferredIvSize = if (overrideIvSize == 8 || overrideIvSize == 16) overrideIvSize else trackCfg.ivSize
         )
 
-        val cipher = Cipher.getInstance("AES/CTR/NoPadding")
+        val cipher = aesCtrCipherThreadLocal.get() ?: Cipher.getInstance("AES/CTR/NoPadding")
         val keySpec = SecretKeySpec(trackCfg.keyBytes, "AES")
         val iv16 = ByteArray(16)
         var mdatCursor = mdatStart
@@ -462,65 +466,34 @@ object ClearKeyDashDecryptor {
                     mdatCursor += clearBytes
                     if (encBytes > 0 && mdatCursor + encBytes <= data.size) {
                         cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(iv16))
-                        val dec = cipher.doFinal(data, mdatCursor, encBytes)
-                        System.arraycopy(dec, 0, data, mdatCursor, dec.size)
+                        cipher.doFinal(data, mdatCursor, encBytes, data, mdatCursor)
                     }
                     mdatCursor += encBytes
                 } else {
-                    val subCursorStart = cursor
-                    var totalEncBytes = 0
+                    var cipherInitialized = false
                     for (s in 0 until subCount) {
+                        val clearBytes = readUInt16(data, cursor)
                         val encBytes = readInt32(data, cursor + 2)
-                        if (encBytes > 0) totalEncBytes += encBytes
                         cursor += 6
+                        mdatCursor += clearBytes
+                        if (encBytes > 0 && mdatCursor + encBytes <= data.size) {
+                            if (!cipherInitialized) {
+                                cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(iv16))
+                                cipherInitialized = true
+                            }
+                            cipher.update(data, mdatCursor, encBytes, data, mdatCursor)
+                        }
+                        mdatCursor += encBytes
                     }
-                    if (totalEncBytes > 0) {
-                        val encBuffer = ByteArray(totalEncBytes)
-                        var encWritePos = 0
-                        var scanMdat = mdatCursor
-                        var scanSenc = subCursorStart
-                        for (s in 0 until subCount) {
-                            val clearBytes = readUInt16(data, scanSenc)
-                            val encBytes = readInt32(data, scanSenc + 2)
-                            scanSenc += 6
-                            scanMdat += clearBytes
-                            if (encBytes > 0 && scanMdat + encBytes <= data.size) {
-                                System.arraycopy(data, scanMdat, encBuffer, encWritePos, encBytes)
-                                encWritePos += encBytes
-                            }
-                            scanMdat += encBytes
-                        }
-                        cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(iv16))
-                        val decBuffer = cipher.doFinal(encBuffer, 0, encWritePos)
-                        var decReadPos = 0
-                        scanSenc = subCursorStart
-                        for (s in 0 until subCount) {
-                            val clearBytes = readUInt16(data, scanSenc)
-                            val encBytes = readInt32(data, scanSenc + 2)
-                            scanSenc += 6
-                            mdatCursor += clearBytes
-                            if (encBytes > 0 && mdatCursor + encBytes <= data.size) {
-                                System.arraycopy(decBuffer, decReadPos, data, mdatCursor, encBytes)
-                                decReadPos += encBytes
-                            }
-                            mdatCursor += encBytes
-                        }
-                    } else {
-                        var scanSenc = subCursorStart
-                        for (s in 0 until subCount) {
-                            val clearBytes = readUInt16(data, scanSenc)
-                            val encBytes = readInt32(data, scanSenc + 2)
-                            scanSenc += 6
-                            mdatCursor += clearBytes + encBytes
-                        }
+                    if (cipherInitialized) {
+                        cipher.doFinal()
                     }
                 }
             } else {
                 val sampleSize = if (i < trunSampleSizes.size) trunSampleSizes[i] else defaultSampleSize
                 if (sampleSize > 0 && mdatCursor + sampleSize <= data.size) {
                     cipher.init(Cipher.DECRYPT_MODE, keySpec, IvParameterSpec(iv16))
-                    val dec = cipher.doFinal(data, mdatCursor, sampleSize)
-                    System.arraycopy(dec, 0, data, mdatCursor, dec.size)
+                    cipher.doFinal(data, mdatCursor, sampleSize, data, mdatCursor)
                 }
                 mdatCursor += sampleSize.coerceAtLeast(0)
             }

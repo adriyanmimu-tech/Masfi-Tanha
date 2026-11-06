@@ -73,10 +73,10 @@ class LivePlaylistMatcherService(
         )
 
         val PLAYZ_BASE_HOSTS = listOf(
-            "https://red-field-c5ad.ladle-meew-fky.workers.dev/https://pabbdyzone.shop/",
             "https://pabbdyzone.shop/",
-            "https://late-star-9f28.test33644.workers.dev/https://tourniquest.site/",
-            "https://tourniquest.site/"
+            "https://red-field-c5ad.ladle-meew-fky.workers.dev/https://pabbdyzone.shop/",
+            "https://tourniquest.site/",
+            "https://late-star-9f28.test33644.workers.dev/https://tourniquest.site/"
         )
 
         private const val PX_AES_KEY = "cz14RStkN01PVE5w"
@@ -661,6 +661,7 @@ class LivePlaylistMatcherService(
     private val playzMatchesById = ConcurrentHashMap<String, LiveMatch>()
     private val playzMatchPointerById = ConcurrentHashMap<String, String>()
     private val playzResolvedStreamsByPointer = ConcurrentHashMap<String, List<StreamSource>>()
+    private val playzResolvedTimestampByPointer = ConcurrentHashMap<String, Long>()
     private val m3uEventEntries = ConcurrentHashMap<String, PlaylistEntry>()
 
     @Volatile
@@ -800,8 +801,16 @@ class LivePlaylistMatcherService(
         if (cleanPointer.isBlank()) return@withContext emptyList()
 
         if (!forceRefresh) {
-            playzResolvedStreamsByPointer[cleanPointer]?.takeIf { it.isNotEmpty() }?.let {
-                return@withContext it
+            val cached = playzResolvedStreamsByPointer[cleanPointer]
+            val cachedAt = playzResolvedTimestampByPointer[cleanPointer] ?: 0L
+            val hasShortLivedToken = cached?.any {
+                it.url.contains("?token=", ignoreCase = true) ||
+                    it.url.contains("&token=", ignoreCase = true) ||
+                    it.url.contains("hdnea=", ignoreCase = true)
+            } == true
+            val ttlMs = if (hasShortLivedToken) 90_000L else 5 * 60_000L
+            if (!cached.isNullOrEmpty() && (System.currentTimeMillis() - cachedAt) < ttlMs) {
+                return@withContext cached
             }
         }
 
@@ -809,8 +818,10 @@ class LivePlaylistMatcherService(
         val parsed = parsePlayzStreamItemsJson(dec, matchIdPrefix)
         if (parsed.isNotEmpty()) {
             playzResolvedStreamsByPointer[cleanPointer] = parsed
+            playzResolvedTimestampByPointer[cleanPointer] = System.currentTimeMillis()
         } else {
             playzResolvedStreamsByPointer.remove(cleanPointer)
+            playzResolvedTimestampByPointer.remove(cleanPointer)
         }
         parsed
     }
@@ -822,8 +833,69 @@ class LivePlaylistMatcherService(
         .followSslRedirects(true)
         .build()
 
-    private fun resolvePlayzWorkerTokenUrl(workerApiUrl: String, linkKey: String = "playback_url"): String? {
-        val cleanApi = workerApiUrl.trim().substringBefore("|").trim()
+    /**
+     * Ported from `sd5yox.apk` (`Lsc/c->d`):
+     * Decodes reversed Base64 + `|` + Caesar cipher shift used by `"type": "sp"` token endpoints.
+     */
+    private fun decodeSpShiftedToken(rawInput: String): String {
+        val trimmed = rawInput.trim()
+        if (trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true)) {
+            return decodeWorkerPlaybackUrl(trimmed)
+        }
+        return runCatching {
+            val reversedBase64 = trimmed.reversed()
+            val decoded = String(Base64.decode(reversedBase64, Base64.DEFAULT), Charsets.UTF_8)
+            if (!decoded.contains("|")) return@runCatching decodeWorkerPlaybackUrl(trimmed)
+            val parts = decoded.split("|", limit = 2)
+            val shiftedUrl = parts[0]
+            val shift = parts[1].trim().toIntOrNull() ?: return@runCatching decodeWorkerPlaybackUrl(shiftedUrl)
+            val sb = StringBuilder(shiftedUrl.length)
+            for (ch in shiftedUrl) {
+                sb.append((ch.code - shift).toChar())
+            }
+            val result = sb.toString().trim()
+            if (result.startsWith("http://", true) || result.startsWith("https://", true)) {
+                decodeWorkerPlaybackUrl(result)
+            } else {
+                decodeWorkerPlaybackUrl(trimmed)
+            }
+        }.getOrDefault(decodeWorkerPlaybackUrl(trimmed))
+    }
+
+    /**
+     * Ported from `sd5yox.apk` (`Lha/b->i`):
+     * Extracts Clappr `player.load({ source: fn() })` where `fn()` returns `(["h","t","t","p",...]).join("")`.
+     */
+    private fun extractHtmlClapprJoinUrl(htmlBody: String): String? {
+        return runCatching {
+            val loadFnMatch = Regex("""\.load\s*\(\s*\{\s*source\s*:\s*([a-zA-Z0-9_$]+)\s*\(\s*\)""")
+                .find(htmlBody)
+            val fnName = loadFnMatch?.groupValues?.getOrNull(1)
+            val arrayPattern = if (!fnName.isNullOrBlank()) {
+                Regex("""function\s+${Regex.escape(fnName)}\s*\(\s*\)\s*\{[\s\S]*?return\s*\(\s*\[([^\]]+)\]\s*\)\.join""")
+            } else {
+                Regex("""return\s*\(\s*\[([^\]]+)\]\s*\)\.join\s*\(\s*["']{2}\s*\)""")
+            }
+            val rawArrayContent = arrayPattern.find(htmlBody)?.groupValues?.getOrNull(1) ?: return null
+            val url = rawArrayContent
+                .replace("\"", "")
+                .replace("'", "")
+                .replace(",", "")
+                .replace("\\/", "/")
+                .replace("\\", "")
+                .replace("\n", "")
+                .replace("\r", "")
+                .trim()
+            url.takeIf { it.startsWith("http://", true) || it.startsWith("https://", true) }
+        }.getOrNull()
+    }
+
+    private fun resolvePlayzWorkerTokenUrl(
+        workerApiUrl: String,
+        linkKey: String = "playback_url",
+        tokenType: String = ""
+    ): String? {
+        val cleanApi = workerApiUrl.trim().substringBefore("|").trim().removeSuffix("?")
         if (!cleanApi.startsWith("http://", true) && !cleanApi.startsWith("https://", true)) return null
         return try {
             val originMatch = Regex("""^(https?://[^/]+)""", RegexOption.IGNORE_CASE)
@@ -841,7 +913,7 @@ class LivePlaylistMatcherService(
             tokenResolveClient.newCall(reqBuilder.build()).execute().use { resp ->
                 if (!resp.isSuccessful) return null
                 val contentType = resp.header("Content-Type", "").orEmpty().lowercase(Locale.US)
-                // If the URL itself is already a direct video/HLS stream, return it immediately without reading the whole body
+                // If the URL itself is already a direct video/HLS stream, return it immediately
                 if (contentType.contains("mpegurl") ||
                     contentType.contains("video/") ||
                     contentType.contains("dash+xml") ||
@@ -853,6 +925,19 @@ class LivePlaylistMatcherService(
                 if (bodyStr.startsWith("#EXTM3U", ignoreCase = true)) {
                     return workerApiUrl.trim()
                 }
+
+                // 1. Handle `"type": "yt"` (`Lsc/d->d` in sd5yox.apk): extract `"hlsManifestUrl":"...m3u8"`
+                if (tokenType.equals("yt", ignoreCase = true) || bodyStr.contains("\"hlsManifestUrl\"")) {
+                    val ytM3u8 = Regex(""""hlsManifestUrl"\s*:\s*"(https?:[^"]+?\.m3u8[^"]*)"""")
+                        .find(bodyStr)?.groupValues?.getOrNull(1)
+                        ?.replace("\\/", "/")
+                        ?.replace("\\u0026", "&")
+                    if (!ytM3u8.isNullOrBlank()) {
+                        return ytM3u8
+                    }
+                }
+
+                // 2. Handle JSON response (`"type": "sp"` or standard JSON token API)
                 if (bodyStr.startsWith("{")) {
                     val json = JSONObject(bodyStr)
                     val rawPlayback = json.optString(linkKey.ifBlank { "playback_url" }, "")
@@ -862,23 +947,29 @@ class LivePlaylistMatcherService(
                         .ifBlank { json.optString("stream", "") }
                         .trim()
                     if (rawPlayback.isBlank()) return null
-                    decodeWorkerPlaybackUrl(rawPlayback)
-                } else {
-                    // Support HTML embed players (e.g. soccerfull.net/play/... containing var m3u8Url = "...", file: "...", etc.)
-                    val unescapedBody = bodyStr.replace("\\/", "/")
-                    val extractedStream = Regex("""(?:m3u8Url|videoUrl|streamUrl|hlsUrl|file|source|src)\s*[:=]\s*["'](https?://[^"'\s<>]+)["']""", RegexOption.IGNORE_CASE)
-                        .find(unescapedBody)?.groupValues?.getOrNull(1)
-                        ?: Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4|mpd)[^\s"'<>]*)""", RegexOption.IGNORE_CASE)
-                            .find(unescapedBody)?.groupValues?.getOrNull(1)
-                    if (!extractedStream.isNullOrBlank()) {
-                        if (!originMatch.isNullOrBlank() && !extractedStream.contains("|")) {
-                            "$extractedStream|referer=$cleanApi&origin=$originMatch"
-                        } else {
-                            extractedStream
-                        }
+                    return if (tokenType.equals("sp", ignoreCase = true)) {
+                        decodeSpShiftedToken(rawPlayback)
                     } else {
-                        null
+                        decodeWorkerPlaybackUrl(rawPlayback)
                     }
+                }
+
+                // 3. Handle `"type": "html"` Clappr array `.join("")` (`Lha/b->i` in sd5yox.apk)
+                val clapprJoinedUrl = extractHtmlClapprJoinUrl(bodyStr)
+                if (!clapprJoinedUrl.isNullOrBlank()) {
+                    return clapprJoinedUrl
+                }
+
+                // 4. Handle `"type": "embed"` HTML players (`Lha/b->j` in sd5yox.apk: `var m3u8Url = "..."`)
+                val unescapedBody = bodyStr.replace("\\/", "/")
+                val extractedStream = Regex("""(?:m3u8Url|videoUrl|streamUrl|hlsUrl|file|source|src)\s*[:=]\s*["'](https?://[^"'\s<>]+)["']""", RegexOption.IGNORE_CASE)
+                    .find(unescapedBody)?.groupValues?.getOrNull(1)
+                    ?: Regex("""(https?://[^\s"'<>]+\.(?:m3u8|mp4|mpd)[^\s"'<>]*)""", RegexOption.IGNORE_CASE)
+                        .find(unescapedBody)?.groupValues?.getOrNull(1)
+                if (!extractedStream.isNullOrBlank()) {
+                    extractedStream.trim()
+                } else {
+                    null
                 }
             }
         } catch (_: Exception) {
@@ -888,17 +979,32 @@ class LivePlaylistMatcherService(
 
     internal fun decodeWorkerPlaybackUrl(rawPlayback: String): String {
         val trimmed = rawPlayback.trim()
-        val urlPart = trimmed.substringBefore("|").trim()
+        val urlPart = trimmed.substringBefore("|").trim().removeSuffix("?")
         val pipePart = if (trimmed.contains("|")) trimmed.substringAfter("|").trim() else ""
         val decodedUrl = if (
             urlPart.startsWith("http%3A", ignoreCase = true) ||
             urlPart.startsWith("https%3A", ignoreCase = true)
         ) {
-            runCatching { URLDecoder.decode(urlPart, "UTF-8").trim() }.getOrDefault(urlPart)
+            runCatching { URLDecoder.decode(urlPart, "UTF-8").trim().removeSuffix("?") }.getOrDefault(urlPart)
         } else {
             urlPart
         }
         return if (pipePart.isNotBlank()) "$decodedUrl|$pipePart" else decodedUrl
+    }
+
+    private fun isDeadOrPlaceholderStreamUrl(url: String): Boolean {
+        val clean = url.substringBefore("|").trim().lowercase(Locale.US)
+        if (clean.isBlank()) return true
+        if (!clean.startsWith("http://") && !clean.startsWith("https://")) return true
+        return clean == "http://no.link" ||
+            clean == "https://no.link" ||
+            clean.startsWith("http://no.link/") ||
+            clean.startsWith("https://no.link/") ||
+            clean == "http://error" ||
+            clean == "https://error" ||
+            clean.contains("://error.m3u8") ||
+            clean.endsWith(".txt") ||
+            clean.contains("workers.dev/?q=")
     }
 
     private fun isLikelyEmbedOrWorkerPage(url: String): Boolean {
@@ -928,6 +1034,10 @@ class LivePlaylistMatcherService(
                         rawItem.optString("link").trim().startsWith("{") -> {
                         JSONObject(rawItem.optString("link"))
                     }
+                    rawItem.has("channel") && rawItem.opt("channel") is String &&
+                        rawItem.optString("channel").trim().startsWith("{") -> {
+                        JSONObject(rawItem.optString("channel"))
+                    }
                     else -> rawItem
                 }
                 if (!itemObj.optBoolean("visible", true)) continue
@@ -953,27 +1063,23 @@ class LivePlaylistMatcherService(
                 val tokenLinkKey = tokenApiObj?.optString("link_key", "playback_url")?.trim().ifNullOrBlank { "playback_url" }
 
                 val rawLink = when {
-                    (tokenType.equals("sp", ignoreCase = true) || tokenType.equals("embed", ignoreCase = true) || rawLinkField.isBlank()) &&
+                    (tokenType.isNotBlank() || rawLinkField.isBlank() || isDeadOrPlaceholderStreamUrl(rawLinkField)) &&
                         tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
-                        resolvePlayzWorkerTokenUrl(tokenApiEndpoint, tokenLinkKey)
+                        resolvePlayzWorkerTokenUrl(tokenApiEndpoint, tokenLinkKey, tokenType)
                             ?: if (isLikelyEmbedOrWorkerPage(rawLinkField)) {
-                                resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: rawLinkField
+                                resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey, tokenType) ?: rawLinkField
                             } else {
                                 rawLinkField
                             }
                     }
                     isLikelyEmbedOrWorkerPage(rawLinkField) -> {
-                        resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey) ?: rawLinkField
+                        resolvePlayzWorkerTokenUrl(rawLinkField, tokenLinkKey, tokenType) ?: rawLinkField
                     }
                     else -> rawLinkField
                 }.trim()
 
-                val baseLink = rawLink.substringBefore("|").trim()
-                if (baseLink.isBlank() ||
-                    (!baseLink.startsWith("http://", true) && !baseLink.startsWith("https://", true)) ||
-                    baseLink.endsWith(".txt", ignoreCase = true) ||
-                    baseLink.contains("workers.dev/?q=", ignoreCase = true)
-                ) {
+                val baseLink = rawLink.substringBefore("|").trim().removeSuffix("?")
+                if (isDeadOrPlaceholderStreamUrl(baseLink)) {
                     continue
                 }
                 val apiField = itemObj.optString("api", "").trim()

@@ -174,7 +174,8 @@ class ExoPlayerManager(private val context: Context) {
         }
     }
 
-    // Shared high-performance OkHttpClient with HTTP/2, fast DNS & generous read timeout for Highlights & Live CDNs
+    // Shared high-performance OkHttpClient with HTTP/2, fast DNS & Disguised Highlight Segment Sanitizer
+    // (strips fake 188-byte PNG headers on tiktokcdn .image segments & normalizes .css/.image Content-Type to video/mp2t)
     private val streamHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .dns(fastDns)
@@ -184,6 +185,67 @@ class ExoPlayerManager(private val context: Context) {
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
+            .addNetworkInterceptor { chain ->
+                val request = chain.request()
+                val response = chain.proceed(request)
+                val body = response.body ?: return@addNetworkInterceptor response
+                val pathLower = request.url.encodedPath.lowercase(Locale.US)
+                val contentTypeLower = response.header("Content-Type", "").orEmpty().lowercase(Locale.US)
+
+                // Never touch manifests (.m3u8 / .mpd)
+                if (pathLower.endsWith(".m3u8") ||
+                    pathLower.endsWith(".mpd") ||
+                    contentTypeLower.contains("mpegurl") ||
+                    contentTypeLower.contains("dash+xml")
+                ) {
+                    return@addNetworkInterceptor response
+                }
+
+                val isDisguisedSegmentCandidate = contentTypeLower.startsWith("image/") ||
+                    contentTypeLower.startsWith("text/css") ||
+                    contentTypeLower.startsWith("text/javascript") ||
+                    contentTypeLower.startsWith("text/plain") ||
+                    pathLower.endsWith(".image") ||
+                    pathLower.endsWith(".css") ||
+                    pathLower.endsWith(".png") ||
+                    pathLower.endsWith(".jpg") ||
+                    pathLower.endsWith(".jpeg") ||
+                    pathLower.endsWith(".js")
+
+                if (!isDisguisedSegmentCandidate) {
+                    return@addNetworkInterceptor response
+                }
+
+                runCatching {
+                    val source = body.source()
+                    source.request(752L)
+                    val buffer = source.buffer
+                    val available = buffer.size.toInt()
+                    if (available >= 377) {
+                        var tsStartOffset = -1
+                        val maxScan = minOf(available - 376, 376)
+                        for (offset in 0 until maxScan) {
+                            if (buffer[offset.toLong()] == 0x47.toByte() &&
+                                buffer[(offset + 188).toLong()] == 0x47.toByte() &&
+                                buffer[(offset + 376).toLong()] == 0x47.toByte()
+                            ) {
+                                tsStartOffset = offset
+                                break
+                            }
+                        }
+                        if (tsStartOffset >= 0) {
+                            if (tsStartOffset > 0) {
+                                source.skip(tsStartOffset.toLong())
+                            }
+                            return@addNetworkInterceptor response.newBuilder()
+                                .header("Content-Type", "video/mp2t")
+                                .removeHeader("Content-Length")
+                                .build()
+                        }
+                    }
+                }
+                response
+            }
             .build()
     }
 
@@ -212,7 +274,7 @@ class ExoPlayerManager(private val context: Context) {
                 .filter { it.isEnabled && it.url.isNotBlank() }
                 .take(5)
                 .forEach { stream ->
-                    val cleanUrl = stream.url.substringBefore("|").trim()
+                    val cleanUrl = stream.url.substringBefore("|").trim().removeSuffix("?")
                     val host = runCatching { Uri.parse(cleanUrl).host }.getOrNull()
                     if (!host.isNullOrBlank() && preWarmedHosts.add(host)) {
                         launch {
@@ -256,7 +318,7 @@ class ExoPlayerManager(private val context: Context) {
     fun getPlayer(): ExoPlayer {
         if (exoPlayer == null) {
             val renderersFactory = DefaultRenderersFactory(context)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
                 .setEnableDecoderFallback(true)
 
             // Smooth Native Adaptive Bitrate Track Selector:
@@ -267,26 +329,41 @@ class ExoPlayerManager(private val context: Context) {
                     6_000,  // minDurationForQualityIncreaseMs (confirm 6s stable speed before raising quality)
                     2_000,  // maxDurationForQualityDecreaseMs (step down in 2s when internet dips)
                     5_000,  // minDurationToRetainAfterDiscardMs (keep 5s buffered so switches never stutter)
-                    0.70f   // bandwidthFraction (30% safety headroom so slow networks never choke)
+                    0.75f   // bandwidthFraction (25% safety headroom so slow networks never choke)
                 )
             )
 
-            // Anti-Stutter Buffer Window:
-            // - 2.5s start buffer ensures a full segment is ready before first frame plays (prevents 1s play -> buffer cycle)
+            // Reference APK (Lhc/d) Buffer Window:
+            // - 60s minBuffer / 120s maxBuffer continuously pre-fetches segments 1-2 minutes ahead
+            // - 2.5s start buffer ensures a full segment is ready before first frame plays
             // - 5.0s re-buffer cushion ensures recovery plays continuously without stopping every few seconds
-            // - 25s–120s deep ahead buffer keeps Highlights and Live streams smooth
             val loadControl = DefaultLoadControl.Builder()
+                .setAllocator(androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE))
                 .setBufferDurationsMs(
-                    25_000,  // min buffer 25s ahead
-                    120_000, // max buffer 120s (2 mins deep pre-buffer for highlights & live)
-                    2_500,   // playback start buffer 2.5s (smooth start without immediate stall)
-                    5_000    // re-buffer 5.0s (builds solid cushion so playback doesn't stop every few seconds)
+                    60_000,  // min buffer 60s ahead (matches Lhc/d in reference APK)
+                    120_000, // max buffer 120s ahead (2 mins deep pre-buffer for highlights & live)
+                    2_500,   // playback start buffer 2.5s
+                    5_000    // re-buffer 5.0s
                 )
                 .setPrioritizeTimeOverSizeThresholds(true)
-                .setBackBuffer(30_000, true) // 30s back-buffer in RAM so rewind is zero-lag
+                .setBackBuffer(30_000, true)
                 .build()
 
+            // Reference APK (Lwc/g->d) Initial Bandwidth Estimate Override:
+            // Starts at a safe 1 Mbps estimate across all network types so ExoPlayer fetches a fast 480p/720p
+            // first segment in <0.4s (zero initial stall) and then smoothly ramps up to 1080p FHD as real speed is measured.
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
+                .setInitialBitrateEstimate(1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_UNKNOWN, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_WIFI, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_2G, 500_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_3G, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_4G, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_SA, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_NSA, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_CELLULAR_UNKNOWN, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_ETHERNET, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_OTHER, 1_000_000L)
                 .setResetOnNetworkTypeChange(true)
                 .build()
             sharedBandwidthMeter = bandwidthMeter
@@ -527,7 +604,7 @@ class ExoPlayerManager(private val context: Context) {
 
     private fun parseStreamSpec(stream: StreamSource): ParsedStreamSpec {
         val raw = stream.url.trim()
-        val cleanUrl = raw.substringBefore("|").trim()
+        val cleanUrl = raw.substringBefore("|").trim().removeSuffix("?")
         val pipePart = if (raw.contains("|")) raw.substringAfter("|").trim() else ""
 
         var resolvedUserAgent = stream.userAgent?.takeIf { it.isNotBlank() }
