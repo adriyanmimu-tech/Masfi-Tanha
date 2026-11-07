@@ -1062,6 +1062,13 @@ class LivePlaylistMatcherService(
                 val tokenApiEndpoint = tokenApiObj?.optString("api", "")?.trim().orEmpty()
                 val tokenLinkKey = tokenApiObj?.optString("link_key", "playback_url")?.trim().ifNullOrBlank { "playback_url" }
 
+                val resolvedFromEndpoint = when {
+                    (tokenType.isNotBlank() || rawLinkField.isBlank() || isDeadOrPlaceholderStreamUrl(rawLinkField)) &&
+                        tokenApiEndpoint.startsWith("http", ignoreCase = true) -> tokenApiEndpoint
+                    isLikelyEmbedOrWorkerPage(rawLinkField) -> rawLinkField
+                    else -> ""
+                }
+
                 val rawLink = when {
                     (tokenType.isNotBlank() || rawLinkField.isBlank() || isDeadOrPlaceholderStreamUrl(rawLinkField)) &&
                         tokenApiEndpoint.startsWith("http", ignoreCase = true) -> {
@@ -1082,6 +1089,12 @@ class LivePlaylistMatcherService(
                 if (isDeadOrPlaceholderStreamUrl(baseLink)) {
                     continue
                 }
+                val embedOrigin = if (resolvedFromEndpoint.isNotBlank()) {
+                    Regex("""^(https?://[^/]+)""", RegexOption.IGNORE_CASE)
+                        .find(resolvedFromEndpoint.trim())?.groupValues?.getOrNull(1)
+                } else {
+                    null
+                }
                 val apiField = itemObj.optString("api", "").trim()
                 val isDash = baseLink.contains(".mpd", ignoreCase = true)
                 val drmLicense = if (apiField.contains(":") || apiField.startsWith("http", true)) apiField else null
@@ -1093,8 +1106,12 @@ class LivePlaylistMatcherService(
                 val itemReferer = itemObj.optString("referer", "")
                     .ifBlank { itemObj.optString("referrer", "") }
                     .trim()
+                    .ifBlank { embedOrigin?.let { "$it/" }.orEmpty() }
                     .ifBlank { null }
-                val itemOrigin = itemObj.optString("origin", "").trim().ifBlank { null }
+                val itemOrigin = itemObj.optString("origin", "")
+                    .trim()
+                    .ifBlank { embedOrigin.orEmpty() }
+                    .ifBlank { null }
                 val itemCookie = itemObj.optString("cookie", "").trim().ifBlank { null }
 
                 val quality = when {

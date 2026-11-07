@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserFavorite": {
+      "title": "UserFavorite",
+      "description": "A user's saved favorite match or sports channel synced across devices.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated user UID who owns this favorite item."
+        },
+        "itemId": {
+          "type": "string",
+          "description": "ID of the favorite match or channel."
+        },
+        "itemType": {
+          "type": "string",
+          "enum": ["match", "channel"],
+          "description": "Type of the favorited item."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title of the favorited match or channel."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when favorite was added (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when favorite was last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "itemId", "itemType", "title", "createdAt", "updatedAt"]
+    },
+    "CloudCatalogItem": {
+      "title": "CloudCatalogItem",
+      "description": "Publicly broadcasted live match, channel, or global app config synced from Admin Panel.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the authenticated user/admin who created this broadcast item."
+        },
+        "itemType": {
+          "type": "string",
+          "enum": ["match", "channel", "config"],
+          "description": "Catalog entity type."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "description": "Visibility scope for catalog queries."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title of the catalog item."
+        },
+        "payloadJson": {
+          "type": "string",
+          "description": "Serialized catalog payload."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when item was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when item was updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["ownerId", "itemType", "visibility", "title", "payloadJson", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/favorites/{favId}": {
+      "schema": { "$ref": "#/entities/UserFavorite" },
+      "description": "Per-user private favorites collection."
+    },
+    "/cloud_items/{itemId}": {
+      "schema": { "$ref": "#/entities/CloudCatalogItem" },
+      "description": "Public catalog items broadcasted to all authenticated users."
+    }
+  }
+}

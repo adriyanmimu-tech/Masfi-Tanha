@@ -134,7 +134,14 @@ fun AdminPanelScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF0B111E))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.08f),
+                                Color.Black.copy(alpha = 0.92f)
+                            )
+                        )
+                    )
                     .statusBarsPadding()
             ) {
                 // Exact same TopSportsBar visual style with Back button, Logo, Title & right-side Telegram/Refresh/Search icons
@@ -349,19 +356,19 @@ fun AdminPanelScreen(
             SnackbarHost(hostState = snackbarHostState)
         },
         bottomBar = {
-            // Exact same floating rounded pill navigation bar as BottomSportsNavBar
+            // Frosted White Glass floating rounded pill navigation bar
             AdminBottomPillNavBar(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it }
             )
         },
-        containerColor = Color(0xFF0B111E)
+        containerColor = Color.Black
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFF0B111E))
+                .background(Color.Black)
         ) {
             when (selectedTab) {
                 AdminTab.MATCHES -> {
@@ -585,19 +592,30 @@ private fun AdminBottomPillNavBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        Surface(
-            color = Color(0xFF1A2434),
-            shape = RoundedCornerShape(38.dp),
-            tonalElevation = 10.dp,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp)
+                .height(60.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.14f),
+                            Color.White.copy(alpha = 0.05f)
+                        )
+                    )
+                )
                 .border(
                     width = 1.dp,
-                    color = Color(0xFF28374E),
-                    shape = RoundedCornerShape(38.dp)
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.38f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(32.dp)
                 )
         ) {
             Row(
@@ -617,9 +635,18 @@ private fun AdminBottomPillNavBar(
                             .weight(1f)
                             .fillMaxHeight()
                             .padding(vertical = 4.dp, horizontal = 2.dp)
-                            .clip(RoundedCornerShape(32.dp))
+                            .clip(RoundedCornerShape(28.dp))
                             .background(
-                                if (isSelected) Color(0xFF223348) else Color.Transparent
+                                if (isSelected) Color.White.copy(alpha = 0.16f) else Color.Transparent
+                            )
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(
+                                        width = 0.8.dp,
+                                        color = Color.White.copy(alpha = 0.32f),
+                                        shape = RoundedCornerShape(28.dp)
+                                    )
+                                } else Modifier
                             )
                             .clickable { onTabSelected(tab) }
                             .testTag("admin_tab_${tab.name.lowercase()}"),
@@ -633,15 +660,15 @@ private fun AdminBottomPillNavBar(
                                 imageVector = tab.icon,
                                 contentDescription = tab.label,
                                 tint = if (isSelected) activeCyan else inactiveGrey,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(19.dp)
                             )
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = tab.label,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = if (isSelected) activeCyan else inactiveGrey,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 10.sp
+                                    fontSize = 9.5.sp
                                 ),
                                 maxLines = 1
                             )
@@ -719,15 +746,15 @@ private fun AdminLiveEventsSection(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B111E))
+            .background(Color.Transparent)
     ) {
         // 1. Exact same Top Sport Selector Row (All, Cricket, Football) from LiveEventsScreen
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SportIconTopCard(
@@ -767,8 +794,8 @@ private fun AdminLiveEventsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 10.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             StatusFilterPill(
@@ -808,49 +835,49 @@ private fun AdminLiveEventsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 10.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 onClick = onAddMatchClick,
                 colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(34.dp)
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(30.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Add Match", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Add Match", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
 
             OutlinedButton(
                 onClick = onOpenLeagueFilterModal,
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, CyanAccent.copy(alpha = 0.6f)),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(34.dp)
+                shape = RoundedCornerShape(10.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.28f)),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(30.dp)
             ) {
-                Icon(Icons.Default.Tune, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(15.dp))
-                Spacer(modifier = Modifier.width(5.dp))
+                Icon(Icons.Default.Tune, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     "Leagues (${config.enabledFootballLeagues.size})",
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 )
             }
 
             OutlinedButton(
                 onClick = onPushAllToCloud,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, LiveGreen.copy(alpha = 0.7f)),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(34.dp)
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(30.dp)
             ) {
-                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = LiveGreen, modifier = Modifier.size(15.dp))
-                Spacer(modifier = Modifier.width(5.dp))
-                Text("Sync to Users", color = LiveGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = LiveGreen, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Sync to Users", color = LiveGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
         }
 
@@ -885,7 +912,7 @@ private fun AdminLiveEventsSection(
                     .fillMaxSize()
                     .padding(horizontal = 10.dp),
                 contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(
                     items = filteredMatches,
@@ -894,9 +921,9 @@ private fun AdminLiveEventsSection(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Color(0xFF111A2B))
-                            .border(1.dp, Color(0xFF233248), RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .border(0.9.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(15.dp))
                     ) {
                         // Exact same MatchCard seen by users
                         MatchCard(
@@ -910,8 +937,8 @@ private fun AdminLiveEventsSection(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF0D1522))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .background(Color.White.copy(alpha = 0.06f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {

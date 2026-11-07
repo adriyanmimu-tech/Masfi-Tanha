@@ -176,6 +176,7 @@ dependencies {
 tasks.withType<Test> {
   failFast = true
   timeout.set(Duration.ofMinutes(2))
+  systemProperty("robolectric.dependency.repo.url", "https://maven-central.storage-download.googleapis.com/maven2/")
   testLogging {
     events("passed", "failed", "skipped")
   }

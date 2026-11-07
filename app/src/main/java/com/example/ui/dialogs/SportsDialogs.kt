@@ -34,18 +34,35 @@ fun NetworkStreamDialog(
     var title by remember { mutableStateOf("Custom Stream") }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .border(1.dp, CyanAccent, RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = NavyDark),
-            shape = RoundedCornerShape(20.dp)
+                .padding(12.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF06090F).copy(alpha = 0.94f))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.13f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.42f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(Icons.Default.Podcasts, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(36.dp))
@@ -149,18 +166,35 @@ fun AdminPinDialog(
     var error by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .border(1.dp, GoldYellow, RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = NavyDark),
-            shape = RoundedCornerShape(20.dp)
+                .padding(12.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF06090F).copy(alpha = 0.94f))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.13f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.42f),
+                            GoldYellow.copy(alpha = 0.30f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = GoldYellow, modifier = Modifier.size(36.dp))
@@ -241,18 +275,35 @@ fun M3UPlaylistImportDialog(
     var isImporting by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
-                .border(1.dp, CyanAccent, RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = NavyDark),
-            shape = RoundedCornerShape(20.dp)
+                .padding(12.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF06090F).copy(alpha = 0.94f))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.13f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.42f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(Icons.Default.PlaylistPlay, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(36.dp))
@@ -359,18 +410,35 @@ fun HighlightsDialog(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp)
-                .border(1.dp, CyanAccent, RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = NavyDark),
-            shape = RoundedCornerShape(20.dp)
+                .padding(vertical = 10.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF06090F).copy(alpha = 0.94f))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.13f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.42f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp)
+                    .padding(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -509,23 +577,46 @@ fun LiveScoresModalDialog(
 
     val sportMatches = if (selectedTab == 0) cricketMatches else footballMatches
     val activeList = remember(sportMatches, selectedStatusFilter) {
-        if (selectedStatusFilter == null) sportMatches
-        else sportMatches.filter { it.status == selectedStatusFilter }
+        when (selectedStatusFilter) {
+            null -> sportMatches
+            com.example.data.model.MatchStatus.UPCOMING -> sportMatches.filter {
+                it.status == com.example.data.model.MatchStatus.UPCOMING ||
+                    it.status == com.example.data.model.MatchStatus.UNKNOWN
+            }
+            else -> sportMatches.filter { it.status == selectedStatusFilter }
+        }
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
-                .border(1.dp, CyanAccent, RoundedCornerShape(20.dp)),
-            colors = CardDefaults.cardColors(containerColor = NavyDark),
-            shape = RoundedCornerShape(20.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color(0xFF06090F).copy(alpha = 0.94f))
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.13f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.42f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(22.dp)
+                )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(14.dp)
             ) {
                 // Header
                 Row(
@@ -537,15 +628,16 @@ fun LiveScoresModalDialog(
                         Icon(
                             if (selectedTab == 0) Icons.Default.SportsCricket else Icons.Default.SportsSoccer,
                             contentDescription = null,
-                            tint = CyanAccent
+                            tint = CyanAccent,
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(7.dp))
                         Text(
                             text = "International Match Center",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
-                                fontSize = 17.sp
+                                fontSize = 15.5.sp
                             )
                         )
                     }
@@ -554,13 +646,14 @@ fun LiveScoresModalDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Sport Switcher Tabs
                 TabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = NavySurface,
+                    containerColor = Color.White.copy(alpha = 0.06f),
                     contentColor = CyanAccent,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)),
                     divider = {}
                 ) {
                     Tab(
@@ -571,7 +664,7 @@ fun LiveScoresModalDialog(
                                 "🏏 Cricket (${cricketMatches.size})",
                                 fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selectedTab == 0) CyanAccent else TextSecondary,
-                                fontSize = 12.sp
+                                fontSize = 11.5.sp
                             )
                         }
                     )
@@ -583,66 +676,69 @@ fun LiveScoresModalDialog(
                                 "⚽ Football (${footballMatches.size})",
                                 fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selectedTab == 1) CyanAccent else TextSecondary,
-                                fontSize = 12.sp
+                                fontSize = 11.5.sp
                             )
                         }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(7.dp))
 
                 // Status Filter Row: All, Live, Upcoming, Finished
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     val liveCount = sportMatches.count { it.status == com.example.data.model.MatchStatus.LIVE }
-                    val upCount = sportMatches.count { it.status == com.example.data.model.MatchStatus.UPCOMING }
+                    val upCount = sportMatches.count {
+                        it.status == com.example.data.model.MatchStatus.UPCOMING ||
+                            it.status == com.example.data.model.MatchStatus.UNKNOWN
+                    }
                     val finCount = sportMatches.count { it.status == com.example.data.model.MatchStatus.FINISHED }
 
                     FilterChip(
                         selected = selectedStatusFilter == null,
                         onClick = { selectedStatusFilter = null },
-                        label = { Text("All (${sportMatches.size})", fontSize = 10.sp) }
+                        label = { Text("All (${sportMatches.size})", fontSize = 9.5.sp) }
                     )
                     FilterChip(
                         selected = selectedStatusFilter == com.example.data.model.MatchStatus.LIVE,
                         onClick = { selectedStatusFilter = com.example.data.model.MatchStatus.LIVE },
-                        label = { Text("Live ($liveCount)", fontSize = 10.sp) }
+                        label = { Text("Live ($liveCount)", fontSize = 9.5.sp) }
                     )
                     FilterChip(
                         selected = selectedStatusFilter == com.example.data.model.MatchStatus.UPCOMING,
                         onClick = { selectedStatusFilter = com.example.data.model.MatchStatus.UPCOMING },
-                        label = { Text("Upcoming ($upCount)", fontSize = 10.sp) }
+                        label = { Text("Upcoming ($upCount)", fontSize = 9.5.sp) }
                     )
                     FilterChip(
                         selected = selectedStatusFilter == com.example.data.model.MatchStatus.FINISHED,
                         onClick = { selectedStatusFilter = com.example.data.model.MatchStatus.FINISHED },
-                        label = { Text("Done ($finCount)", fontSize = 10.sp) }
+                        label = { Text("Done ($finCount)", fontSize = 9.5.sp) }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(7.dp))
 
                 if (activeList.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp),
+                            .height(180.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No matches returned by CREX for this tab.",
+                            text = if (selectedTab == 0) "No cricket matches found for this filter." else "No football matches found for this filter.",
                             color = TextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 11.5.sp
                         )
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 390.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         items(activeList, key = { "${it.status}_${it.id}" }) { match ->
                             val v1 = com.example.data.util.TeamFlagResolver.resolveForMatch(
@@ -658,19 +754,27 @@ fun LiveScoresModalDialog(
                                 isNationalTeam = match.isNationalTeam
                             )
 
-                            Card(
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clip(RoundedCornerShape(13.dp))
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.12f),
+                                                Color.White.copy(alpha = 0.04f)
+                                            )
+                                        )
+                                    )
                                     .border(
-                                        1.dp,
-                                        if (match.status == com.example.data.model.MatchStatus.LIVE) CyanAccent.copy(alpha = 0.5f) else NavyBorder,
-                                        RoundedCornerShape(12.dp)
+                                        0.9.dp,
+                                        if (match.status == com.example.data.model.MatchStatus.LIVE) CyanAccent.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.24f),
+                                        RoundedCornerShape(13.dp)
                                     )
                                     .clickable {
                                         onWatchMatch(match)
                                         onDismiss()
-                                    },
-                                colors = CardDefaults.cardColors(containerColor = NavySurface)
+                                    }
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Row(

@@ -313,48 +313,50 @@ fun PlayerScreen(
                     )
                 }
 
-                // Horizontal Streams Available Buttons + Smooth SD Toggle
+                // Horizontal Streams Available Buttons + Smooth SD Toggle (Frosted White Glass)
                 if (streams.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(NavySurface)
+                            .background(Color.White.copy(alpha = 0.04f))
                             .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // 1-Tap Smooth Mode / Data Saver Chip
-                        Surface(
+                        Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isLowQualityMode) GoldYellow.copy(alpha = 0.18f)
+                                    else Color.White.copy(alpha = 0.10f)
+                                )
                                 .border(
-                                    1.5.dp,
-                                    if (isLowQualityMode) GoldYellow else NavyBorder,
+                                    1.dp,
+                                    if (isLowQualityMode) GoldYellow else Color.White.copy(alpha = 0.28f),
                                     RoundedCornerShape(10.dp)
                                 )
                                 .clickable { playerManager.toggleLowQualityMode() }
-                                .testTag("player_smooth_sd_toggle"),
-                            color = if (isLowQualityMode) GoldYellow.copy(alpha = 0.16f) else NavySurfaceVariant,
-                            shape = RoundedCornerShape(10.dp)
+                                .testTag("player_smooth_sd_toggle")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     Icons.Default.Tune,
                                     contentDescription = "Quality Mode",
                                     tint = if (isLowQualityMode) GoldYellow else CyanAccent,
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(modifier = Modifier.width(5.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (isLowQualityMode) "Smooth SD: ON" else "Quality: Auto HD",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = if (isLowQualityMode) GoldYellow else TextPrimary,
-                                        fontSize = 11.5.sp
+                                        fontSize = 10.5.sp
                                     )
                                 )
                             }
@@ -370,33 +372,55 @@ fun PlayerScreen(
                         }
 
                         // More streams dialog button
-                        OutlinedButton(
-                            onClick = { showStreamPickerModal = true },
-                            modifier = Modifier.height(38.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(NavyBorder)),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = NavySurfaceVariant)
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(10.dp))
+                                .clickable { showStreamPickerModal = true }
+                                .padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Tune, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("All Servers", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Tune, contentDescription = null, tint = CyanAccent, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("All Servers", color = TextPrimary, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
 
-                // Match details card or channel banner (both Team 1 and Team 2 flags guaranteed visible)
+                // Match details card (Frosted White Glass Overlay + Compact Proportions)
                 if (match != null) {
-                    Card(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                            .border(1.dp, NavyBorder, RoundedCornerShape(14.dp)),
-                        colors = CardDefaults.cardColors(containerColor = NavySurface)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.13f),
+                                        Color.White.copy(alpha = 0.04f)
+                                    )
+                                )
+                            )
+                            .border(
+                                width = 0.9.dp,
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.36f),
+                                        Color.White.copy(alpha = 0.12f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            )
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -410,21 +434,21 @@ fun PlayerScreen(
                                     teamName = match.team1Name,
                                     isNationalTeam = match.isNationalTeam
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(7.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = match.team1Name,
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = TextPrimary,
-                                            fontSize = 13.sp
+                                            fontSize = 12.sp
                                         ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = match.team1Code,
-                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary)
+                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary, fontSize = 9.5.sp)
                                     )
                                 }
                             }
@@ -438,13 +462,13 @@ fun PlayerScreen(
                                     MatchStatus.UPCOMING, MatchStatus.UNKNOWN -> UpcomingBadge()
                                     MatchStatus.FINISHED -> FinishedBadge()
                                 }
-                                Spacer(modifier = Modifier.height(3.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "VS",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = CyanAccent,
-                                        fontSize = 11.sp
+                                        fontSize = 10.sp
                                     )
                                 )
                                 if (match.matchTime.isNotBlank()) {
@@ -452,7 +476,7 @@ fun PlayerScreen(
                                         text = match.matchTime,
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = TextSecondary,
-                                            fontSize = 8.5.sp
+                                            fontSize = 8.sp
                                         ),
                                         maxLines = 1
                                     )
@@ -473,7 +497,7 @@ fun PlayerScreen(
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = TextPrimary,
-                                            fontSize = 13.sp
+                                            fontSize = 12.sp
                                         ),
                                         textAlign = TextAlign.End,
                                         maxLines = 1,
@@ -481,11 +505,11 @@ fun PlayerScreen(
                                     )
                                     Text(
                                         text = match.team2Code,
-                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary),
+                                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary, fontSize = 9.5.sp),
                                         textAlign = TextAlign.End
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(7.dp))
                                 TeamFlagBadge(
                                     flag = match.team2FlagUrl,
                                     code = match.team2Code,
@@ -503,22 +527,22 @@ fun PlayerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(horizontal = 12.dp)
+                            .padding(horizontal = 10.dp)
                     ) {
                         Text(
                             text = "OTHER LIVE & UPCOMING MATCHES",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextSecondary,
-                                fontSize = 11.sp,
-                                letterSpacing = 1.sp
+                                fontSize = 10.sp,
+                                letterSpacing = 0.8.sp
                             ),
-                            modifier = Modifier.padding(vertical = 6.dp)
+                            modifier = Modifier.padding(vertical = 4.dp)
                         )
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(7.dp),
                             contentPadding = PaddingValues(bottom = 24.dp)
                         ) {
                             items(otherMatches, key = { it.id }) { other ->
@@ -558,38 +582,37 @@ fun StreamChipButton(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) CyanAccent else NavyBorder
-    val containerBg = if (isSelected) CyanAccent.copy(alpha = 0.15f) else NavySurfaceVariant
+    val borderColor = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.28f)
+    val containerBg = if (isSelected) CyanAccent.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.09f)
 
-    Surface(
+    Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .background(containerBg)
+            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .testTag("stream_chip_${stream.name.lowercase().replace(" ", "_")}"),
-        color = containerBg,
-        shape = RoundedCornerShape(10.dp)
+            .testTag("stream_chip_${stream.name.lowercase().replace(" ", "_")}")
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.PlayCircle,
                 contentDescription = null,
                 tint = if (isSelected) CyanAccent else TextSecondary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
             Text(
                 text = stream.name,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = if (isSelected) CyanAccent else TextPrimary,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 )
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(5.dp))
             QualityBadge(quality = stream.quality)
         }
     }

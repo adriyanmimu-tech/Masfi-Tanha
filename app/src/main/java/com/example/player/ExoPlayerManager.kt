@@ -14,7 +14,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
@@ -52,11 +54,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.net.InetAddress
 import java.net.URLDecoder
 import java.util.Collections
 import java.util.Locale
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(UnstableApi::class)
 class ExoPlayerManager(private val context: Context) {
@@ -65,6 +71,11 @@ class ExoPlayerManager(private val context: Context) {
         @Volatile
         private var sharedMediaCache: SimpleCache? = null
         private val cacheLock = Any()
+
+        // Dedicated 8-thread pool for parallel HTTP 206 byte-range segment acceleration on throttled Highlight CDNs
+        private val parallelSegmentExecutor = Executors.newFixedThreadPool(8) { r ->
+            Thread(r, "PlayLive-ParallelSeg").apply { isDaemon = true }
+        }
 
         fun getOrCreateDiskCache(context: Context): SimpleCache? {
             sharedMediaCache?.let { return it }
@@ -132,7 +143,9 @@ class ExoPlayerManager(private val context: Context) {
             idLower.startsWith("pz-hl-") ||
             idLower.startsWith("highlight") ||
             nameLower.contains("highlight") ||
-            nameLower.contains("recap")
+            nameLower.contains("recap") ||
+            nameLower.contains("1st half") ||
+            nameLower.contains("2nd half")
     }
 
     // Fast in-memory DNS cache + IPv4 preference to avoid slow DNS lookups on stream/segment switches
@@ -149,79 +162,308 @@ class ExoPlayerManager(private val context: Context) {
         }
     }
 
-    // Shared high-performance OkHttpClient with HTTP/2, fast DNS & Disguised Highlight Segment Sanitizer
-    // (strips fake 188-byte PNG headers on tiktokcdn .image segments & normalizes .css/.image Content-Type to video/mp2t)
+    // Shared high-performance OkHttpClient (matching j0xdkn.apk Lf4/a0 -> OkHttpDataSource.Factory):
+    // Does NOT strip Content-Length or mutate segment bytes because Media3's TsExtractor (Lb4/f0)
+    // natively scans up to 940 bytes for 0x47 sync bytes (automatically skipping 120-byte PNG headers
+    // on tiktokcdn .image segments and reading .woff2/.css MPEG-TS segments with intact Content-Length).
     private val streamHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .dns(fastDns)
-            .connectionPool(ConnectionPool(24, 5, TimeUnit.MINUTES))
+            .connectionPool(ConnectionPool(32, 5, TimeUnit.MINUTES))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .retryOnConnectionFailure(true)
-            .addNetworkInterceptor { chain ->
-                val request = chain.request()
-                val response = chain.proceed(request)
-                val body = response.body ?: return@addNetworkInterceptor response
-                val pathLower = request.url.encodedPath.lowercase(Locale.US)
-                val contentTypeLower = response.header("Content-Type", "").orEmpty().lowercase(Locale.US)
+            .build()
+    }
 
-                // Never touch manifests (.m3u8 / .mpd)
-                if (pathLower.endsWith(".m3u8") ||
-                    pathLower.endsWith(".mpd") ||
-                    contentTypeLower.contains("mpegurl") ||
-                    contentTypeLower.contains("dash+xml")
-                ) {
-                    return@addNetworkInterceptor response
+    /**
+     * Multi-Connection HTTP 206 Byte-Range Accelerator for throttled Highlight CDNs
+     * (e.g. `s1q2105.com` / `soccerfull.net` `.woff2` segments which throttle single connections to ~35-65 KB/s).
+     * Splits each segment into 256 KB byte ranges downloaded across 8 parallel connections (~4+ Mbps),
+     * while returning the first 256 KB chunk immediately so ExoPlayer starts rendering in < 0.4s.
+     */
+    private inner class ParallelHighlightSegmentDataSource(
+        private val delegate: DataSource,
+        private val userAgent: String,
+        private val defaultHeaders: Map<String, String>
+    ) : DataSource {
+
+        private val transferListeners = mutableListOf<TransferListener>()
+        private var currentDataSpec: DataSpec? = null
+        private var activeParallelState: ParallelDownloadState? = null
+        private var directFallbackStream: InputStream? = null
+        private var directBytesRemaining: Long = C.LENGTH_UNSET.toLong()
+        private var usingDelegate: Boolean = false
+        private var transferStarted: Boolean = false
+
+        override fun addTransferListener(transferListener: TransferListener) {
+            delegate.addTransferListener(transferListener)
+            transferListeners.add(transferListener)
+        }
+
+        private fun shouldAccelerateSegment(dataSpec: DataSpec): Boolean {
+            if (dataSpec.position != 0L || dataSpec.length != C.LENGTH_UNSET.toLong()) return false
+            val uriStr = dataSpec.uri.toString().lowercase(Locale.US)
+            val path = dataSpec.uri.path?.lowercase(Locale.US).orEmpty()
+            if (path.endsWith(".m3u8") || path.endsWith(".mpd") || uriStr.contains(".m3u8")) return false
+
+            // Always accelerate disguised .woff2/.woff/.ttf segments and s1q / soccerfull highlight CDNs
+            if (path.endsWith(".woff2") ||
+                path.endsWith(".woff") ||
+                path.endsWith(".ttf") ||
+                uriStr.contains("s1q") ||
+                uriStr.contains("soccerfull")
+            ) {
+                return true
+            }
+
+            // Also accelerate HLS segments when playing a Highlight / Full-Match Replay stream
+            if (isVodOrHighlightStream(_currentStream.value) &&
+                (path.endsWith(".ts") || path.endsWith(".css") || path.endsWith(".js"))
+            ) {
+                return true
+            }
+            return false
+        }
+
+        override fun open(dataSpec: DataSpec): Long {
+            currentDataSpec = dataSpec
+            usingDelegate = false
+            transferStarted = false
+            activeParallelState = null
+            directFallbackStream = null
+
+            if (!shouldAccelerateSegment(dataSpec)) {
+                usingDelegate = true
+                return delegate.open(dataSpec)
+            }
+
+            val chunkSize = 256 * 1024 // 256 KB per parallel range chunk
+            val url = dataSpec.uri.toString()
+
+            return try {
+                for (listener in transferListeners) {
+                    listener.onTransferInitializing(this, dataSpec, true)
                 }
 
-                val isDisguisedSegmentCandidate = contentTypeLower.startsWith("image/") ||
-                    contentTypeLower.startsWith("text/css") ||
-                    contentTypeLower.startsWith("text/javascript") ||
-                    contentTypeLower.startsWith("text/plain") ||
-                    pathLower.endsWith(".image") ||
-                    pathLower.endsWith(".css") ||
-                    pathLower.endsWith(".png") ||
-                    pathLower.endsWith(".jpg") ||
-                    pathLower.endsWith(".jpeg") ||
-                    pathLower.endsWith(".js")
-
-                if (!isDisguisedSegmentCandidate) {
-                    return@addNetworkInterceptor response
+                val firstReqBuilder = Request.Builder()
+                    .url(url)
+                    .get()
+                    .header("User-Agent", userAgent)
+                    .header("Range", "bytes=0-${chunkSize - 1}")
+                for ((k, v) in defaultHeaders) {
+                    firstReqBuilder.header(k, v)
+                }
+                for ((k, v) in dataSpec.httpRequestHeaders) {
+                    firstReqBuilder.header(k, v)
                 }
 
-                runCatching {
-                    val source = body.source()
-                    source.request(752L)
-                    val buffer = source.buffer
-                    val available = buffer.size.toInt()
-                    if (available >= 377) {
-                        var tsStartOffset = -1
-                        val maxScan = minOf(available - 376, 376)
-                        for (offset in 0 until maxScan) {
-                            if (buffer[offset.toLong()] == 0x47.toByte() &&
-                                buffer[(offset + 188).toLong()] == 0x47.toByte() &&
-                                buffer[(offset + 376).toLong()] == 0x47.toByte()
-                            ) {
-                                tsStartOffset = offset
-                                break
-                            }
+                val firstResp = streamHttpClient.newCall(firstReqBuilder.build()).execute()
+                val code = firstResp.code
+
+                if (code == 206) {
+                    val contentRange = firstResp.header("Content-Range").orEmpty()
+                    // Example: "bytes 0-262143/1371648"
+                    val totalSize = contentRange.substringAfterLast('/', "").trim().toLongOrNull() ?: -1L
+                    val firstBytes = firstResp.body?.use { it.bytes() } ?: ByteArray(0)
+
+                    if (totalSize <= 0L || firstBytes.isEmpty()) {
+                        usingDelegate = true
+                        return delegate.open(dataSpec)
+                    }
+
+                    val numChunks = ((totalSize + chunkSize - 1) / chunkSize).toInt()
+                    val cancelled = AtomicBoolean(false)
+                    val chunkFutures = Array<CompletableFuture<ByteArray>>(numChunks) { idx ->
+                        if (idx == 0) {
+                            CompletableFuture.completedFuture(firstBytes)
+                        } else {
+                            val startByte = idx.toLong() * chunkSize
+                            val endByte = minOf(totalSize - 1L, startByte + chunkSize - 1L)
+                            CompletableFuture.supplyAsync({
+                                if (cancelled.get()) throw IOException("Cancelled")
+                                fetchByteRangeWithRetry(url, dataSpec, startByte, endByte, cancelled)
+                            }, parallelSegmentExecutor)
                         }
-                        if (tsStartOffset >= 0) {
-                            if (tsStartOffset > 0) {
-                                source.skip(tsStartOffset.toLong())
-                            }
-                            return@addNetworkInterceptor response.newBuilder()
-                                .header("Content-Type", "video/mp2t")
-                                .removeHeader("Content-Length")
-                                .build()
+                    }
+
+                    activeParallelState = ParallelDownloadState(
+                        totalSize = totalSize,
+                        chunkSize = chunkSize,
+                        chunkFutures = chunkFutures,
+                        cancelled = cancelled
+                    )
+                    transferStarted = true
+                    for (listener in transferListeners) {
+                        listener.onTransferStart(this, dataSpec, true)
+                    }
+                    totalSize
+                } else if (code == 200) {
+                    val body = firstResp.body
+                    if (body == null) {
+                        firstResp.close()
+                        usingDelegate = true
+                        return delegate.open(dataSpec)
+                    }
+                    val contentLen = body.contentLength()
+                    directFallbackStream = body.byteStream()
+                    directBytesRemaining = if (contentLen >= 0L) contentLen else C.LENGTH_UNSET.toLong()
+                    transferStarted = true
+                    for (listener in transferListeners) {
+                        listener.onTransferStart(this, dataSpec, true)
+                    }
+                    directBytesRemaining
+                } else {
+                    firstResp.close()
+                    usingDelegate = true
+                    delegate.open(dataSpec)
+                }
+            } catch (_: Exception) {
+                activeParallelState?.cancel()
+                activeParallelState = null
+                runCatching { directFallbackStream?.close() }
+                directFallbackStream = null
+                usingDelegate = true
+                delegate.open(dataSpec)
+            }
+        }
+
+        private fun fetchByteRangeWithRetry(
+            url: String,
+            dataSpec: DataSpec,
+            startByte: Long,
+            endByte: Long,
+            cancelled: AtomicBoolean
+        ): ByteArray {
+            var lastError: Exception? = null
+            for (attempt in 1..3) {
+                if (cancelled.get()) throw IOException("Cancelled")
+                try {
+                    val reqBuilder = Request.Builder()
+                        .url(url)
+                        .get()
+                        .header("User-Agent", userAgent)
+                        .header("Range", "bytes=$startByte-$endByte")
+                    for ((k, v) in defaultHeaders) {
+                        reqBuilder.header(k, v)
+                    }
+                    for ((k, v) in dataSpec.httpRequestHeaders) {
+                        reqBuilder.header(k, v)
+                    }
+                    streamHttpClient.newCall(reqBuilder.build()).execute().use { resp ->
+                        if (!resp.isSuccessful) {
+                            throw IOException("HTTP ${resp.code} for range $startByte-$endByte")
+                        }
+                        val bytes = resp.body?.bytes() ?: throw IOException("Empty range body")
+                        if (bytes.isEmpty()) throw IOException("Zero bytes in range $startByte-$endByte")
+                        return bytes
+                    }
+                } catch (e: Exception) {
+                    lastError = e
+                }
+            }
+            throw IOException("Failed range $startByte-$endByte after retries", lastError)
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (usingDelegate) {
+                return delegate.read(buffer, offset, length)
+            }
+            if (length == 0) return 0
+
+            val parallel = activeParallelState
+            if (parallel != null) {
+                val bytesRead = parallel.read(buffer, offset, length)
+                if (bytesRead > 0) {
+                    val spec = currentDataSpec
+                    if (spec != null) {
+                        for (listener in transferListeners) {
+                            listener.onBytesTransferred(this, spec, true, bytesRead)
                         }
                     }
                 }
-                response
+                return bytesRead
             }
-            .build()
+
+            val stream = directFallbackStream ?: return C.RESULT_END_OF_INPUT
+            val readCount = stream.read(buffer, offset, length)
+            if (readCount == -1) {
+                return C.RESULT_END_OF_INPUT
+            }
+            if (directBytesRemaining != C.LENGTH_UNSET.toLong()) {
+                directBytesRemaining -= readCount
+            }
+            val spec = currentDataSpec
+            if (spec != null && readCount > 0) {
+                for (listener in transferListeners) {
+                    listener.onBytesTransferred(this, spec, true, readCount)
+                }
+            }
+            return readCount
+        }
+
+        override fun getUri(): Uri? {
+            return if (usingDelegate) delegate.uri else currentDataSpec?.uri
+        }
+
+        override fun close() {
+            if (usingDelegate) {
+                delegate.close()
+                usingDelegate = false
+                return
+            }
+            activeParallelState?.cancel()
+            activeParallelState = null
+            runCatching { directFallbackStream?.close() }
+            directFallbackStream = null
+            if (transferStarted) {
+                transferStarted = false
+                val spec = currentDataSpec
+                if (spec != null) {
+                    for (listener in transferListeners) {
+                        listener.onTransferEnd(this, spec, true)
+                    }
+                }
+            }
+            currentDataSpec = null
+        }
+    }
+
+    private class ParallelDownloadState(
+        val totalSize: Long,
+        val chunkSize: Int,
+        val chunkFutures: Array<CompletableFuture<ByteArray>>,
+        val cancelled: AtomicBoolean
+    ) {
+        private var globalPosition: Long = 0L
+
+        fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (globalPosition >= totalSize) return C.RESULT_END_OF_INPUT
+            val chunkIdx = (globalPosition / chunkSize).toInt().coerceIn(0, chunkFutures.lastIndex)
+            val chunkBytes = try {
+                chunkFutures[chunkIdx].get(25, TimeUnit.SECONDS)
+            } catch (e: Exception) {
+                throw IOException("Parallel highlight chunk $chunkIdx failed", e)
+            }
+            val offsetInChunk = (globalPosition % chunkSize).toInt()
+            val availableInChunk = chunkBytes.size - offsetInChunk
+            if (availableInChunk <= 0) return C.RESULT_END_OF_INPUT
+            val toCopy = minOf(length, availableInChunk)
+            System.arraycopy(chunkBytes, offsetInChunk, buffer, offset, toCopy)
+            globalPosition += toCopy
+            return toCopy
+        }
+
+        fun cancel() {
+            cancelled.set(true)
+            for (future in chunkFutures) {
+                if (!future.isDone) {
+                    future.cancel(true)
+                }
+            }
+        }
     }
 
     // Fast chunk retry policy so transient network drops never freeze Highlights or Live streams
@@ -292,11 +534,12 @@ class ExoPlayerManager(private val context: Context) {
 
     fun getPlayer(): ExoPlayer {
         if (exoPlayer == null) {
+            // Match j0xdkn.apk (PlayerActivity.B): EXTENSION_RENDERER_MODE_ON (1) prioritizes hardware MediaCodec first
             val renderersFactory = DefaultRenderersFactory(context)
-                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
                 .setEnableDecoderFallback(true)
 
-            // Match reference APK (sd5yox.apk) DefaultTrackSelector + AdaptiveTrackSelection
+            // Match reference APK (j0xdkn.apk) DefaultTrackSelector + AdaptiveTrackSelection
             val trackSelector = DefaultTrackSelector(
                 context,
                 AdaptiveTrackSelection.Factory()
@@ -308,37 +551,35 @@ class ExoPlayerManager(private val context: Context) {
                 )
             }
 
-            // Reference APK (Lhc/d) Buffer Window:
-            // - 60s minBuffer / 120s maxBuffer continuously pre-fetches segments 1-2 minutes ahead
-            // - 2.5s start buffer ensures a full segment is ready before first frame plays
-            // - 5.0s re-buffer cushion ensures recovery plays continuously without stopping every few seconds
+            // Reference APK (Ld7/e in j0xdkn.apk) Buffer Window + Fast Highlight Start:
+            // - 60s minBuffer / 120s maxBuffer continuously pre-fetches segments up to 2 minutes ahead
+            // - 1.2s start buffer begins decoding as soon as the first ~256 KB of a segment arrives
+            // - 2.5s re-buffer cushion recovers rapidly with 128 MB target buffer cap
             val loadControl = DefaultLoadControl.Builder()
                 .setAllocator(androidx.media3.exoplayer.upstream.DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE))
                 .setBufferDurationsMs(
-                    60_000,  // min buffer 60s ahead (matches Lhc/d in reference APK)
+                    60_000,  // min buffer 60s ahead (matches Ld7/e in j0xdkn.apk)
                     120_000, // max buffer 120s ahead (2 mins deep pre-buffer for highlights & live)
-                    2_500,   // playback start buffer 2.5s
-                    5_000    // re-buffer 5.0s
+                    1_200,   // fast playback start buffer 1.2s (renders first frame immediately on large segments)
+                    2_500    // fast re-buffer recovery 2.5s
                 )
+                .setTargetBufferBytes(128 * 1024 * 1024)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .setBackBuffer(30_000, true)
                 .build()
 
-            // Reference APK (Lwc/g->d) Initial Bandwidth Estimate Override:
-            // Starts at a safe 1 Mbps estimate across all network types so ExoPlayer fetches a fast 480p/720p
-            // first segment in <0.4s (zero initial stall) and then smoothly ramps up to 1080p FHD as real speed is measured.
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context)
-                .setInitialBitrateEstimate(1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_UNKNOWN, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_WIFI, 1_000_000L)
+                .setInitialBitrateEstimate(2_200_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_UNKNOWN, 2_200_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_WIFI, 2_500_000L)
                 .setInitialBitrateEstimate(C.NETWORK_TYPE_2G, 500_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_3G, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_4G, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_SA, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_NSA, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_CELLULAR_UNKNOWN, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_ETHERNET, 1_000_000L)
-                .setInitialBitrateEstimate(C.NETWORK_TYPE_OTHER, 1_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_3G, 1_500_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_4G, 2_200_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_SA, 3_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_5G_NSA, 3_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_CELLULAR_UNKNOWN, 2_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_ETHERNET, 3_000_000L)
+                .setInitialBitrateEstimate(C.NETWORK_TYPE_OTHER, 2_200_000L)
                 .setResetOnNetworkTypeChange(true)
                 .build()
             sharedBandwidthMeter = bandwidthMeter
@@ -710,13 +951,26 @@ class ExoPlayerManager(private val context: Context) {
         val spec = parseStreamSpec(stream)
         val uri = Uri.parse(spec.cleanUrl)
 
-        // Use pooled OkHttpDataSource.Factory so HTTP/2 multiplexing & keep-alive sockets eliminate chunk stalls
-        // and native HTTP 206 Byte-Range requests work properly for Highlights (.mp4) & VOD streams
+        // Use pooled OkHttpDataSource.Factory with sharedBandwidthMeter TransferListener (matching j0xdkn.apk Lf4/a0)
         val okHttpDataSourceFactory = OkHttpDataSource.Factory(streamHttpClient)
             .setUserAgent(spec.userAgent)
 
+        sharedBandwidthMeter?.let { meter ->
+            okHttpDataSourceFactory.setTransferListener(meter)
+        }
+
         if (spec.headers.isNotEmpty()) {
             okHttpDataSourceFactory.setDefaultRequestProperties(spec.headers)
+        }
+
+        val hlsDataSourceFactory = DataSource.Factory {
+            ParallelHighlightSegmentDataSource(
+                delegate = okHttpDataSourceFactory.createDataSource(),
+                userAgent = spec.userAgent,
+                defaultHeaders = spec.headers
+            ).apply {
+                sharedBandwidthMeter?.let { addTransferListener(it) }
+            }
         }
 
         val clearKeyContext = ClearKeyDashDecryptor.parseClearKeyLicense(spec.drmLicense.orEmpty())
@@ -729,11 +983,16 @@ class ExoPlayerManager(private val context: Context) {
         val isDash = lowerUrl.contains(".mpd") ||
             stream.quality.contains("DASH", ignoreCase = true) ||
             (!spec.drmLicense.isNullOrBlank() && !lowerUrl.contains(".m3u8"))
+        // Match j0xdkn.apk Lt7/c;.i(url) HLS detection (.m3u8, =m3u8, .php, .js, .json, /hls/, playlist)
         val isHls = !isDash && (
             lowerUrl.contains(".m3u8") ||
+                lowerUrl.contains("=m3u8") ||
                 lowerUrl.contains("m3u8") ||
                 lowerUrl.contains("/hls/") ||
                 lowerUrl.contains("playlist") ||
+                lowerUrl.contains(".php") ||
+                lowerUrl.contains(".js") ||
+                lowerUrl.contains(".json") ||
                 stream.quality.contains("HLS", ignoreCase = true)
             )
 
@@ -763,7 +1022,7 @@ class ExoPlayerManager(private val context: Context) {
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                     .build()
 
-                HlsMediaSource.Factory(okHttpDataSourceFactory)
+                HlsMediaSource.Factory(hlsDataSourceFactory)
                     .setAllowChunklessPreparation(true)
                     .setLoadErrorHandlingPolicy(resilientLoadErrorPolicy)
                     .setDrmSessionManagerProvider(drmProvider)

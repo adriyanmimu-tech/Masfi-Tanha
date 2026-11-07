@@ -514,36 +514,46 @@ fun FootballLiveTvApp(
                             }
                         )
 
-                        // Announcement Banner (kept on non-LIVE_EVENTS & non-HIGHLIGHTS tabs so headers match screenshots)
+                        // Announcement Banner (Frosted White Glass)
                         if (selectedTab != NavTab.LIVE_EVENTS && selectedTab != NavTab.HIGHLIGHTS && showAnnouncementBanner && config.announcement.isNotBlank()) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(NavySurfaceVariant)
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.12f),
+                                                Color.White.copy(alpha = 0.05f)
+                                            )
+                                        )
+                                    )
+                                    .border(0.8.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     Icons.Default.Campaign,
                                     contentDescription = null,
                                     tint = GoldYellow,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = config.announcement,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = TextPrimary,
-                                        fontSize = 11.sp
+                                        fontSize = 10.5.sp
                                     ),
                                     maxLines = 1,
                                     modifier = Modifier.weight(1f)
                                 )
                                 IconButton(
                                     onClick = { showAnnouncementBanner = false },
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary, modifier = Modifier.size(13.dp))
                                 }
                             }
                         }
@@ -554,23 +564,41 @@ fun FootballLiveTvApp(
                 },
                 bottomBar = {
                     Column {
-                        // Mini Now-Playing Bar when a stream was opened
+                        // Frosted White Glass Mini Now-Playing Bar when a stream is active
                         if (currentStream != null && activeStreams.isNotEmpty()) {
                             val nowPlayingTitle = activeMatch?.let { "${it.team1Code} vs ${it.team2Code}" }
                                 ?: activeChannelTitle
                                 ?: currentStream?.name
                                 ?: "Live Stream"
-                            Surface(
-                                color = NavySurfaceVariant,
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .border(0.5.dp, CyanAccent.copy(alpha = 0.4f))
+                                    .padding(horizontal = 12.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.14f),
+                                                Color.White.copy(alpha = 0.05f)
+                                            )
+                                        )
+                                    )
+                                    .border(
+                                        width = 0.9.dp,
+                                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.38f),
+                                                CyanAccent.copy(alpha = 0.28f)
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
                                     .clickable { currentScreen = AppScreen.PLAYER }
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                        .padding(horizontal = 12.dp, vertical = 7.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -578,20 +606,29 @@ fun FootballLiveTvApp(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Icon(
-                                            Icons.Default.LiveTv,
-                                            contentDescription = null,
-                                            tint = CyanAccent,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(CyanAccent.copy(alpha = 0.14f))
+                                                .border(0.7.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.LiveTv,
+                                                contentDescription = null,
+                                                tint = CyanAccent,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(9.dp))
                                         Column {
                                             Text(
                                                 text = nowPlayingTitle,
                                                 style = MaterialTheme.typography.bodySmall.copy(
                                                     fontWeight = FontWeight.Bold,
                                                     color = TextPrimary,
-                                                    fontSize = 12.sp
+                                                    fontSize = 11.5.sp
                                                 ),
                                                 maxLines = 1
                                             )
@@ -599,7 +636,7 @@ fun FootballLiveTvApp(
                                                 text = currentStream?.name ?: "Tap to return to player",
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     color = CyanAccent,
-                                                    fontSize = 10.sp
+                                                    fontSize = 9.5.sp
                                                 ),
                                                 maxLines = 1
                                             )
@@ -610,17 +647,20 @@ fun FootballLiveTvApp(
                                             onClick = {
                                                 if (isPlayerPlaying) playerManager.pause() else playerManager.resume()
                                             },
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(30.dp)
                                         ) {
                                             Icon(
                                                 if (isPlayerPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                                 contentDescription = "Play/Pause",
-                                                tint = CyanAccent
+                                                tint = CyanAccent,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                         }
                                         IconButton(
                                             onClick = {
-                                                playerManager.pause()
+                                                playerManager.stopAndClear()
+                                                activeMatch = null
+                                                activeChannelTitle = null
                                                 activeStreams = emptyList()
                                             },
                                             modifier = Modifier.size(28.dp)
@@ -629,7 +669,7 @@ fun FootballLiveTvApp(
                                                 Icons.Default.Close,
                                                 contentDescription = "Close mini player",
                                                 tint = TextSecondary,
-                                                modifier = Modifier.size(16.dp)
+                                                modifier = Modifier.size(15.dp)
                                             )
                                         }
                                     }
@@ -1074,14 +1114,26 @@ fun FootballLiveTvApp(
         )
     }
 
-    // Modal: Telegram community dialog
+    // Modal: Telegram community dialog (Black Glassmorphism)
     if (showTelegramDialog) {
         AlertDialog(
             onDismissRequest = { showTelegramDialog = false },
-            icon = { Icon(Icons.Default.Info, contentDescription = null, tint = CyanAccent) },
-            title = { Text("Join Telegram Community") },
+            modifier = Modifier.border(
+                width = 1.dp,
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.14f))
+                ),
+                shape = RoundedCornerShape(22.dp)
+            ),
+            shape = RoundedCornerShape(22.dp),
+            icon = { Icon(Icons.Default.Send, contentDescription = null, tint = CyanAccent) },
+            title = { Text("Join Telegram Community", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
             text = {
-                Text("Join our sports live stream updates channel on Telegram to get instant match notifications, direct links, and server status.")
+                Text(
+                    "Join our sports live stream updates channel on Telegram to get instant match notifications, direct links, and server status.",
+                    color = TextSecondary,
+                    fontSize = 12.5.sp
+                )
             },
             confirmButton = {
                 Button(
@@ -1096,15 +1148,15 @@ fun FootballLiveTvApp(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                 ) {
-                    Text("Open Telegram", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Open Telegram", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTelegramDialog = false }) {
-                    Text("Close", color = TextSecondary)
+                    Text("Close", color = TextSecondary, fontSize = 12.sp)
                 }
             },
-            containerColor = NavyDark
+            containerColor = Color(0xFF0A0E17)
         )
     }
 }

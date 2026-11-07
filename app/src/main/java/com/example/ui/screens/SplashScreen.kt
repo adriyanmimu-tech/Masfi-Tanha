@@ -52,37 +52,55 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NavyDark,
-                        Color(0xFF060B1E),
-                        NavyDark
-                    )
-                )
-            )
+            .background(Color.Black)
             .clickable { onSplashFinished() } // Allow quick tap to skip
             .testTag("splash_screen_root"),
         contentAlignment = Alignment.Center
     ) {
+        // Ambient radial glow behind glass logo
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        CyanAccent.copy(alpha = 0.18f),
+                        Color.Transparent
+                    ),
+                    center = center,
+                    radius = size.minDimension * 0.55f
+                ),
+                radius = size.minDimension * 0.55f,
+                center = center
+            )
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
         ) {
-            // App Logo Box displaying the PLAYLIVE icon
+            // Frosted White Glass Logo Box displaying the PLAYLIVE icon
             Box(
                 modifier = Modifier
                     .scale(scale)
-                    .size(136.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color(0xFF060B1E))
+                    .size(124.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.16f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        )
+                    )
                     .border(
-                        width = 2.dp,
+                        width = 1.5.dp,
                         brush = Brush.linearGradient(
-                            colors = listOf(Color(0xFFFF3D00), Color(0xFFE53935), CyanAccent)
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.48f),
+                                CyanAccent.copy(alpha = 0.65f)
+                            )
                         ),
-                        shape = RoundedCornerShape(28.dp)
+                        shape = RoundedCornerShape(26.dp)
                     )
                     .testTag("splash_app_logo"),
                 contentAlignment = Alignment.Center
