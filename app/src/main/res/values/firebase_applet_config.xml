@@ -1,4 +1,10 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="firestore_database_id" translatable="false">ai-studio-android-masfitan-9b5a2426-5188-4e5b-aaf1-7c99ba49b62b</string>
+    <string name="firebase_project_id" translatable="false">gen-lang-client-0468674435</string>
+    <string name="firebase_app_id" translatable="false">1:1075101479724:android:8149ab09e17545a1e6002b</string>
+    <string name="firebase_api_key" translatable="false">AIzaSyB5B4tK0N12r5EgpG71w9eA_c1oUv4B8s</string>
+    <string name="firebase_storage_bucket" translatable="false">gen-lang-client-0468674435.firebasestorage.app</string>
+    <string name="firebase_gcm_sender_id" translatable="false">1075101479724</string>
+    <string name="firebase_database_id" translatable="false">ai-studio-285ffeb1-92ac-4493-bf44-043284b68c08</string>
+    <string name="default_web_client_id" translatable="false">1075101479724-sports-live-web-client.apps.googleusercontent.com</string>
 </resources>
