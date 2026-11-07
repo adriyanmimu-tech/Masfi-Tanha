@@ -128,15 +128,15 @@ fun LiveEventsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
+            .background(Color.Transparent)
     ) {
-        // 1. Modern Neon Capsule Sport Filter Dock
+        // 1. Modern Frosted Glass Capsule Sport Filter Dock
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 10.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SportIconTopCard(
@@ -222,8 +222,8 @@ fun LiveEventsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 10.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             StatusFilterPill(
@@ -260,36 +260,37 @@ fun LiveEventsScreen(
 
         if (isServingStaleCache) {
             Surface(
-                color = Color(0xFF141E30),
+                color = Color.White.copy(alpha = 0.08f),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
+                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "সর্বশেষ ক্যাশ করা ম্যাচ তালিকা দেখানো হচ্ছে (Showing cached feed)",
-                        style = MaterialTheme.typography.labelSmall.copy(color = GoldYellow),
+                        style = MaterialTheme.typography.labelSmall.copy(color = GoldYellow, fontSize = 10.sp),
                         modifier = Modifier.weight(1f)
                     )
                     TextButton(
                         onClick = onManualRefresh,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        modifier = Modifier.height(28.dp)
+                        modifier = Modifier.height(26.dp)
                     ) {
-                        Text("Retry", color = CyanAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Retry", color = CyanAccent, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // 3. Featured Live Spotlight Hero Carousel + Match Cards List
         if (filteredMatches.isEmpty()) {
@@ -303,7 +304,7 @@ fun LiveEventsScreen(
                     CircularProgressIndicator(
                         color = CyanAccent,
                         strokeWidth = 3.dp,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(34.dp)
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -330,8 +331,8 @@ fun LiveEventsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 10.dp),
-                contentPadding = PaddingValues(top = 2.dp, bottom = 92.dp),
-                verticalArrangement = Arrangement.spacedBy(9.dp)
+                contentPadding = PaddingValues(top = 2.dp, bottom = 86.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 if (spotlightLiveMatches.isNotEmpty() && selectedStatus == null && searchQuery.isBlank()) {
                     item(key = "featured_live_spotlight_carousel") {
@@ -339,14 +340,14 @@ fun LiveEventsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 2.dp, vertical = 2.dp),
+                                    .padding(horizontal = 2.dp, vertical = 1.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
-                                            .size(7.dp)
+                                            .size(6.dp)
                                             .clip(CircleShape)
                                             .background(LiveRed)
                                     )
@@ -356,8 +357,8 @@ fun LiveEventsScreen(
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color.White,
-                                            fontSize = 10.5.sp,
-                                            letterSpacing = 0.6.sp
+                                            fontSize = 10.sp,
+                                            letterSpacing = 0.5.sp
                                         )
                                     )
                                 }
@@ -366,7 +367,7 @@ fun LiveEventsScreen(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = CyanAccent,
-                                        fontSize = 10.sp
+                                        fontSize = 9.5.sp
                                     )
                                 )
                             }
@@ -374,7 +375,7 @@ fun LiveEventsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 contentPadding = PaddingValues(horizontal = 2.dp)
                             ) {
                                 items(
@@ -433,32 +434,35 @@ private fun FeaturedLiveHeroCard(
 
     Card(
         modifier = Modifier
-            .width(248.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .width(214.dp)
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .border(
-                width = 1.3.dp,
+                width = 1.dp,
                 brush = Brush.linearGradient(
-                    colors = listOf(LiveRed, CyanAccent, SkyBlue)
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.45f),
+                        LiveRed.copy(alpha = 0.65f),
+                        CyanAccent.copy(alpha = 0.45f)
+                    )
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp)
             ),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0E1626))
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.linearGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF1A1429),
-                            Color(0xFF0D1829),
-                            Color(0xFF09121E)
+                            Color.White.copy(alpha = 0.14f),
+                            Color.White.copy(alpha = 0.04f)
                         )
                     )
                 )
-                .padding(horizontal = 11.dp, vertical = 9.dp)
+                .padding(horizontal = 9.dp, vertical = 7.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -470,13 +474,13 @@ private fun FeaturedLiveHeroCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(99.dp))
                         .background(LiveRed)
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                        .padding(horizontal = 6.dp, vertical = 1.5.dp)
                 ) {
                     Icon(
                         Icons.Default.Sensors,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(10.dp)
+                        modifier = Modifier.size(9.dp)
                     )
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
@@ -484,25 +488,25 @@ private fun FeaturedLiveHeroCard(
                         style = MaterialTheme.typography.labelSmall.copy(
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 8.5.sp,
+                            fontSize = 8.sp,
                             letterSpacing = 0.4.sp
                         )
                     )
                 }
 
                 Text(
-                    text = match.tournament.take(22),
+                    text = match.tournament.take(20),
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = CyanAccent,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp
+                        fontSize = 9.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -520,13 +524,13 @@ private fun FeaturedLiveHeroCard(
                         teamName = match.team1Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = match.team1Name,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.5.sp
+                            fontSize = 10.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -539,9 +543,9 @@ private fun FeaturedLiveHeroCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         color = GoldYellow,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 13.sp
+                        fontSize = 11.sp
                     ),
-                    modifier = Modifier.padding(horizontal = 6.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
 
                 Column(
@@ -555,13 +559,13 @@ private fun FeaturedLiveHeroCard(
                         teamName = match.team2Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = match.team2Name,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.5.sp
+                            fontSize = 10.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -570,35 +574,35 @@ private fun FeaturedLiveHeroCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(9.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(CyanAccent, SkyBlue)
                         )
                     )
-                    .padding(vertical = 5.dp),
+                    .padding(vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = Color(0xFF070A10),
-                        modifier = Modifier.size(13.dp)
+                        tint = Color.Black,
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         text = "WATCH LIVE FHD",
                         style = MaterialTheme.typography.labelMedium.copy(
-                            color = Color(0xFF070A10),
+                            color = Color.Black,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 10.sp,
-                            letterSpacing = 0.4.sp
+                            fontSize = 9.sp,
+                            letterSpacing = 0.3.sp
                         )
                     )
                 }
@@ -629,7 +633,7 @@ internal fun SportIconTopCard(
 
     Box(
         modifier = Modifier
-            .height(36.dp)
+            .height(32.dp)
             .animateContentSize()
             .clip(RoundedCornerShape(99.dp))
             .background(
@@ -638,48 +642,51 @@ internal fun SportIconTopCard(
                         colors = listOf(CyanAccent, SkyBlue)
                     )
                 } else {
-                    Brush.horizontalGradient(
-                        colors = listOf(Color(0xFF111A2B), Color(0xFF111A2B))
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.11f),
+                            Color.White.copy(alpha = 0.05f)
+                        )
                     )
                 }
             )
             .border(
                 width = 1.dp,
-                color = if (isSelected) CyanAccent else Color(0xFF22324C),
+                color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.22f),
                 shape = RoundedCornerShape(99.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 11.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 3.dp)
             .testTag("sport_chip_${label.lowercase()}"),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = sportEmoji, fontSize = 13.sp)
+            Text(text = sportEmoji, fontSize = 11.5.sp)
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = if (isSelected) Color(0xFF070A10) else Color.White,
+                    color = if (isSelected) Color.Black else Color.White,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 ),
                 maxLines = 1
             )
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(99.dp))
-                    .background(if (isSelected) Color(0xFF070A10).copy(alpha = 0.22f) else LiveRed)
-                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                    .background(if (isSelected) Color.Black.copy(alpha = 0.22f) else LiveRed)
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = badgeCount.toString(),
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (isSelected) Color(0xFF070A10) else Color.White,
+                        color = if (isSelected) Color.Black else Color.White,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 9.5.sp
+                        fontSize = 9.sp
                     )
                 )
             }
@@ -694,21 +701,21 @@ internal fun StatusFilterPill(
     onClick: () -> Unit,
     tag: String
 ) {
-    val borderColor = if (isSelected) CyanAccent else Color(0xFF1F2E47)
-    val bgColor = if (isSelected) CyanAccent.copy(alpha = 0.16f) else Color(0xFF0F1623)
+    val borderColor = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.22f)
+    val bgColor = if (isSelected) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.07f)
 
     Box(
         modifier = Modifier
-            .height(38.dp)
+            .height(32.dp)
             .clip(RoundedCornerShape(50))
             .background(bgColor)
             .border(
-                width = if (isSelected) 1.5.dp else 1.1.dp,
+                width = if (isSelected) 1.3.dp else 0.9.dp,
                 color = borderColor,
                 shape = RoundedCornerShape(50)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 15.dp)
+            .padding(horizontal = 12.dp)
             .testTag(tag),
         contentAlignment = Alignment.Center
     ) {
@@ -721,16 +728,16 @@ internal fun StatusFilterPill(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
                     tint = CyanAccent,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(13.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
             }
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                    color = if (isSelected) CyanAccent else Color(0xFFE2E8F0),
-                    fontSize = 13.sp
+                    color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.90f),
+                    fontSize = 11.5.sp
                 ),
                 maxLines = 1
             )

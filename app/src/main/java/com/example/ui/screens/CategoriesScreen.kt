@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -40,15 +41,15 @@ fun CategoriesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
-            .padding(horizontal = 14.dp)
+            .background(Color.Transparent)
+            .padding(horizontal = 12.dp)
     ) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(filteredCategories, key = { it.id }) { cat ->
                 CategoryGridTile(
@@ -68,26 +69,43 @@ fun CategoryGridTile(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .height(50.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+            .border(
+                width = 1.dp,
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.34f),
+                        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f)
+                    )
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
             .testTag("cat_tile_${category.name.lowercase().replace(" ", "_")}"),
-        colors = CardDefaults.cardColors(containerColor = NavySurface)
+        colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.07f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f),
+                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Category Icon Badge
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
-                    .background(NavySurfaceVariant)
-                    .border(1.dp, NavyBorder, CircleShape),
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.11f))
+                    .border(0.8.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 val icon: ImageVector = when {
@@ -110,11 +128,11 @@ fun CategoryGridTile(
                     imageVector = icon,
                     contentDescription = null,
                     tint = CyanAccent,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -122,7 +140,7 @@ fun CategoryGridTile(
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
+                        fontSize = 11.5.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -131,7 +149,7 @@ fun CategoryGridTile(
                     text = "${category.channelCount} Streams",
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = TextSecondary,
-                        fontSize = 10.sp
+                        fontSize = 9.5.sp
                     )
                 )
             }

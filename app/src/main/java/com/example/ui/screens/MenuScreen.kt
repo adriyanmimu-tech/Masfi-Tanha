@@ -46,18 +46,18 @@ fun MenuScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
+            .background(Color.Transparent)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // App Logo & Header
         Box(
             modifier = Modifier
-                .size(84.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .size(72.dp)
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color.White)
-                .border(2.dp, Color(0xFFFF5722), RoundedCornerShape(20.dp)),
+                .border(1.5.dp, Color.White.copy(alpha = 0.45f), RoundedCornerShape(18.dp)),
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -69,14 +69,14 @@ fun MenuScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = config.appTitle,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
-                fontSize = 20.sp
+                fontSize = 18.sp
             )
         )
 
@@ -84,11 +84,11 @@ fun MenuScreen(
             text = "Version ${config.version}",
             style = MaterialTheme.typography.bodySmall.copy(
                 color = TextSecondary,
-                fontSize = 12.sp
+                fontSize = 11.sp
             )
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Features Section Header
         Row(
@@ -100,18 +100,18 @@ fun MenuScreen(
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     letterSpacing = 1.sp
                 )
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        // Menu Items List matching screenshot 4
+        // Menu Items List
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             MenuItemCard(
                 icon = Icons.Default.Podcasts,
@@ -182,14 +182,31 @@ fun MenuScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, NavyBorder, RoundedCornerShape(14.dp)),
-                colors = CardDefaults.cardColors(containerColor = NavySurface)
+                    .clip(RoundedCornerShape(13.dp))
+                    .border(
+                        width = 1.dp,
+                        brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.34f),
+                                Color.White.copy(alpha = 0.12f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(13.dp)
+                    ),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.White.copy(alpha = 0.04f)
+                                )
+                            )
+                        )
+                        .padding(horizontal = 13.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -199,33 +216,34 @@ fun MenuScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(NavySurfaceVariant),
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(Color.White.copy(alpha = 0.11f))
+                                .border(0.8.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(9.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Default.Settings,
                                 contentDescription = null,
                                 tint = CyanAccent,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(14.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
                                 text = "Force Low Quality",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
-                                    fontSize = 14.sp
+                                    fontSize = 13.sp
                                 )
                             )
                             Text(
                                 text = "Forces lowest resolution on mobile data",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = TextSecondary,
-                                    fontSize = 11.sp
+                                    fontSize = 10.5.sp
                                 )
                             )
                         }
@@ -238,7 +256,7 @@ fun MenuScreen(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = CyanAccent,
                             uncheckedThumbColor = TextSecondary,
-                            uncheckedTrackColor = NavySurfaceVariant
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.16f)
                         ),
                         modifier = Modifier.testTag("switch_force_low_quality")
                     )
@@ -246,7 +264,7 @@ fun MenuScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         // Footer
         Text(
@@ -254,7 +272,7 @@ fun MenuScreen(
             style = MaterialTheme.typography.labelSmall.copy(
                 color = TextTertiary,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 10.sp,
+                fontSize = 9.5.sp,
                 letterSpacing = 1.sp
             )
         )
@@ -273,16 +291,33 @@ fun MenuItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(13.dp))
             .clickable(onClick = onClick)
-            .border(1.dp, NavyBorder, RoundedCornerShape(14.dp))
+            .border(
+                width = 1.dp,
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.34f),
+                        Color.White.copy(alpha = 0.12f)
+                    )
+                ),
+                shape = RoundedCornerShape(13.dp)
+            )
             .testTag("menu_item_${title.lowercase().replace(" ", "_")}"),
-        colors = CardDefaults.cardColors(containerColor = NavySurface)
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .padding(horizontal = 13.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -292,33 +327,34 @@ fun MenuItemCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(NavySurfaceVariant),
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(Color.White.copy(alpha = 0.11f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(9.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = CyanAccent,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
-                            fontSize = 14.sp
+                            fontSize = 13.sp
                         )
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
-                            fontSize = 11.sp
+                            fontSize = 10.5.sp
                         )
                     )
                 }
@@ -328,7 +364,7 @@ fun MenuItemCard(
                 Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
                 tint = TextSecondary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(14.dp)
             )
         }
     }

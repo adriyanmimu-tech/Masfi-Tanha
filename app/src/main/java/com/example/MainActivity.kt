@@ -643,13 +643,54 @@ fun FootballLiveTvApp(
                         )
                     }
                 },
-                containerColor = NavyDark
+                containerColor = Color.Black
             ) { padding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(Color.Black)
                         .padding(padding)
                 ) {
+                    // Ambient Glassmorphism Backdrop Glow Orbs (visible through frosted white glass cards)
+                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawCircle(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(
+                                    CyanAccent.copy(alpha = 0.14f),
+                                    Color.Transparent
+                                ),
+                                center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.12f),
+                                radius = size.minDimension * 0.65f
+                            ),
+                            radius = size.minDimension * 0.65f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.15f, size.height * 0.12f)
+                        )
+                        drawCircle(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(
+                                    com.example.ui.theme.SkyBlue.copy(alpha = 0.11f),
+                                    Color.Transparent
+                                ),
+                                center = androidx.compose.ui.geometry.Offset(size.width * 0.88f, size.height * 0.45f),
+                                radius = size.minDimension * 0.60f
+                            ),
+                            radius = size.minDimension * 0.60f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.88f, size.height * 0.45f)
+                        )
+                        drawCircle(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(
+                                     Color.White.copy(alpha = 0.06f),
+                                    Color.Transparent
+                                ),
+                                center = androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.82f),
+                                radius = size.minDimension * 0.55f
+                            ),
+                            radius = size.minDimension * 0.55f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.45f, size.height * 0.82f)
+                        )
+                    }
+
                     when (selectedTab) {
                         NavTab.LIVE_EVENTS -> {
                             LiveEventsScreen(

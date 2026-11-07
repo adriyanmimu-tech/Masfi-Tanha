@@ -69,17 +69,28 @@ fun TopSportsBar(
     onCloseSearch: () -> Unit = {}
 ) {
     Surface(
-        color = NavyDark,
+        color = Color.Black.copy(alpha = 0.82f),
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.08f),
+                            Color.White.copy(alpha = 0.02f)
+                        )
+                    )
+                )
+        ) {
             if (isSearching) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedTextField(
@@ -92,7 +103,7 @@ fun TopSportsBar(
                             Text(
                                 "Search matches, leagues, channels...",
                                 color = TextSecondary,
-                                fontSize = 13.sp
+                                fontSize = 12.5.sp
                             )
                         },
                         singleLine = true,
@@ -101,9 +112,9 @@ fun TopSportsBar(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                             focusedBorderColor = CyanAccent,
-                            unfocusedBorderColor = NavyBorder,
-                            focusedContainerColor = NavySurface,
-                            unfocusedContainerColor = NavySurface
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.22f),
+                            focusedContainerColor = Color.White.copy(alpha = 0.09f),
+                            unfocusedContainerColor = Color.White.copy(alpha = 0.06f)
                         ),
                         leadingIcon = {
                             Icon(
@@ -124,19 +135,19 @@ fun TopSportsBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 11.dp),
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(9.dp)
                     ) {
                         // Glowing Neon Accent Pill Bar
                         Box(
                             modifier = Modifier
-                                .width(4.dp)
-                                .height(22.dp)
+                                .width(3.5.dp)
+                                .height(20.dp)
                                 .clip(RoundedCornerShape(99.dp))
                                 .background(
                                     Brush.verticalGradient(
@@ -149,15 +160,15 @@ fun TopSportsBar(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
-                                fontSize = 22.sp,
+                                fontSize = 20.sp,
                                 letterSpacing = 0.6.sp
                             )
                         )
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(CyanAccent.copy(alpha = 0.14f))
-                                .border(1.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                                .background(Color.White.copy(alpha = 0.10f))
+                                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -165,7 +176,7 @@ fun TopSportsBar(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = CyanAccent,
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 9.sp,
+                                    fontSize = 8.5.sp,
                                     letterSpacing = 0.8.sp
                                 )
                             )
@@ -174,18 +185,21 @@ fun TopSportsBar(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Favourites Star Glass Button
+                        // Favourites Star Frosted Glass Button
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isFavouritesActive) GoldYellow.copy(alpha = 0.16f) else NavySurface)
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(
+                                    if (isFavouritesActive) GoldYellow.copy(alpha = 0.20f)
+                                    else Color.White.copy(alpha = 0.09f)
+                                )
                                 .border(
                                     width = 1.dp,
-                                    color = if (isFavouritesActive) GoldYellow else NavyBorder,
-                                    shape = RoundedCornerShape(12.dp)
+                                    color = if (isFavouritesActive) GoldYellow else Color.White.copy(alpha = 0.22f),
+                                    shape = RoundedCornerShape(11.dp)
                                 )
                                 .clickable(onClick = onFavouritesClick)
                                 .testTag("favourites_header_button"),
@@ -195,17 +209,17 @@ fun TopSportsBar(
                                 Icons.Default.Star,
                                 contentDescription = "Favourites",
                                 tint = if (isFavouritesActive) GoldYellow else Color.White,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
-                        // Refresh Glass Button
+                        // Refresh Frosted Glass Button
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(NavySurface)
-                                .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(Color.White.copy(alpha = 0.09f))
+                                .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(11.dp))
                                 .clickable(onClick = onRefreshClick)
                                 .testTag("refresh_button"),
                             contentAlignment = Alignment.Center
@@ -214,17 +228,17 @@ fun TopSportsBar(
                                 Icons.Default.Refresh,
                                 contentDescription = "Refresh",
                                 tint = CyanAccent,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
-                        // Search Glass Button
+                        // Search Frosted Glass Button
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(NavySurface)
-                                .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(Color.White.copy(alpha = 0.09f))
+                                .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(11.dp))
                                 .clickable(onClick = onSearchClick)
                                 .testTag("search_button"),
                             contentAlignment = Alignment.Center
@@ -233,7 +247,7 @@ fun TopSportsBar(
                                 Icons.Default.Search,
                                 contentDescription = "Search",
                                 tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -247,8 +261,9 @@ fun TopSportsBar(
                         Brush.horizontalGradient(
                             colors = listOf(
                                 Color.Transparent,
+                                Color.White.copy(alpha = 0.25f),
                                 CyanAccent.copy(alpha = 0.35f),
-                                SkyBlue.copy(alpha = 0.25f),
+                                Color.White.copy(alpha = 0.25f),
                                 Color.Transparent
                             )
                         )
@@ -277,30 +292,37 @@ fun BottomSportsNavBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Surface(
-            color = Color(0xFF0C121E),
-            shape = RoundedCornerShape(28.dp),
-            tonalElevation = 12.dp,
+            color = Color.Black.copy(alpha = 0.78f),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp)
+                .height(62.dp)
                 .border(
-                    width = 1.2.dp,
-                    brush = Brush.horizontalGradient(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF1F2E47),
-                            CyanAccent.copy(alpha = 0.45f),
-                            Color(0xFF1F2E47)
+                            Color.White.copy(alpha = 0.32f),
+                            Color.White.copy(alpha = 0.10f)
                         )
                     ),
-                    shape = RoundedCornerShape(28.dp)
+                    shape = RoundedCornerShape(24.dp)
                 )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.12f),
+                                Color.White.copy(alpha = 0.04f)
+                            )
+                        )
+                    )
                     .padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -308,20 +330,20 @@ fun BottomSportsNavBar(
                 visibleTabs.forEach { tab ->
                     val isSelected = tab == selectedTab
                     val activeNeon = CyanAccent
-                    val inactiveGrey = Color(0xFF8A99AD)
+                    val inactiveGrey = Color.White.copy(alpha = 0.62f)
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .padding(vertical = 5.dp, horizontal = 3.dp)
-                            .clip(RoundedCornerShape(22.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .background(
                                 if (isSelected) {
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            CyanAccent.copy(alpha = 0.18f),
-                                            SkyBlue.copy(alpha = 0.08f)
+                                            Color.White.copy(alpha = 0.18f),
+                                            CyanAccent.copy(alpha = 0.12f)
                                         )
                                     )
                                 } else {
@@ -334,8 +356,8 @@ fun BottomSportsNavBar(
                                 if (isSelected) {
                                     Modifier.border(
                                         width = 1.dp,
-                                        color = CyanAccent.copy(alpha = 0.45f),
-                                        shape = RoundedCornerShape(22.dp)
+                                        color = Color.White.copy(alpha = 0.34f),
+                                        shape = RoundedCornerShape(18.dp)
                                     )
                                 } else Modifier
                             )
@@ -351,15 +373,15 @@ fun BottomSportsNavBar(
                                 imageVector = tab.icon,
                                 contentDescription = tab.label,
                                 tint = if (isSelected) activeNeon else inactiveGrey,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = tab.label,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = if (isSelected) Color.White else inactiveGrey,
-                                    fontSize = 10.5.sp
+                                    fontSize = 10.sp
                                 ),
                                 maxLines = 1
                             )
@@ -536,7 +558,6 @@ fun SportHeaderSquareBadge(sport: SportType, tournament: String) {
             Canvas(modifier = Modifier.size(13.dp)) {
                 val w = size.width
                 val h = size.height
-                // Athlete silhouette mark inside white square badge
                 drawCircle(
                     color = Color(0xFF0F172A),
                     radius = w * 0.14f,
@@ -582,9 +603,6 @@ fun MatchCard(
     onFavoriteToggle: () -> Unit = {},
     onStreamSelectClick: () -> Unit = {}
 ) {
-    // Respect match.isNationalTeam:
-    // - National-team Football & International Cricket -> Country Flag
-    // - Club Football -> Official Club Crest (from ESPN) or Club Shield Fallback (never a country flag)
     val team1Visual = remember(match.team1Name, match.team1Code, match.team1FlagUrl, match.isNationalTeam) {
         TeamFlagResolver.resolveForMatch(
             teamName = match.team1Name,
@@ -602,7 +620,6 @@ fun MatchCard(
         )
     }
 
-    // Format top tournament title as "SPORT | TOURNAMENT" in uppercase
     val formattedHeader = remember(match.sport, match.tournament) {
         val raw = match.tournament.trim().uppercase()
         if (raw.contains("|")) {
@@ -619,7 +636,6 @@ fun MatchCard(
         }
     }
 
-    // Elapsed live timer for LIVE matches (never shows scores)
     val initialSeconds = remember(match.id, match.startTimeEpochMs) {
         val now = System.currentTimeMillis()
         if (match.startTimeEpochMs in 1 until now) {
@@ -650,7 +666,6 @@ fun MatchCard(
         String.format(Locale.US, "%02d:%02d:%02d", hrs, mins, secs)
     }
 
-    // Parse upcoming/kickoff time & date in Asia/Dhaka timezone
     val (upcomingTimeText, upcomingDateText) = remember(match.matchTime, match.startTimeEpochMs) {
         if (match.startTimeEpochMs > 0L) {
             val dhakaTz = TimeZone.getTimeZone("Asia/Dhaka")
@@ -672,7 +687,6 @@ fun MatchCard(
         }
     }
 
-    // Score-free bottom status line
     val bottomStatusText = remember(match.status, liveTimerFormatted, match.startTimeEpochMs, match.timeOrScore) {
         when (match.status) {
             MatchStatus.LIVE -> liveTimerFormatted
@@ -706,21 +720,22 @@ fun MatchCard(
     }
 
     val isLive = match.status == MatchStatus.LIVE
+    // Specular Frosted White Glass Border (brighter top-left edge, subtle bottom-right edge)
     val cardBorderBrush = remember(isLive) {
         if (isLive) {
             Brush.linearGradient(
                 colors = listOf(
-                    LiveRed.copy(alpha = 0.85f),
-                    CyanAccent.copy(alpha = 0.55f),
-                    LiveRed.copy(alpha = 0.65f)
+                    Color.White.copy(alpha = 0.42f),
+                    LiveRed.copy(alpha = 0.65f),
+                    CyanAccent.copy(alpha = 0.45f)
                 )
             )
         } else {
             Brush.linearGradient(
                 colors = listOf(
-                    CyanAccent.copy(alpha = 0.40f),
-                    Color(0xFF1F2D46),
-                    SkyBlue.copy(alpha = 0.30f)
+                    Color.White.copy(alpha = 0.34f),
+                    Color.White.copy(alpha = 0.14f),
+                    Color.White.copy(alpha = 0.08f)
                 )
             )
         }
@@ -729,16 +744,16 @@ fun MatchCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .border(
-                width = if (isLive) 1.4.dp else 1.dp,
+                width = 1.dp,
                 brush = cardBorderBrush,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .testTag("match_card_${match.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C121E))
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f))
     ) {
         Column(
             modifier = Modifier
@@ -746,14 +761,14 @@ fun MatchCard(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF141F33),
-                            Color(0xFF090E17)
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.04f)
                         )
                     )
                 )
-                .padding(horizontal = 12.dp, vertical = 9.dp)
+                .padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
-            // 1. Top Bar: Sport Neon Pill + Tournament Name + Favourite Star
+            // 1. Compact Frosted Header Row: Sport/Tournament Pill + Favourite Star
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -763,25 +778,25 @@ fun MatchCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF0A0F1A))
-                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(7.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(5.dp)
                             .clip(CircleShape)
                             .background(if (isLive) LiveRed else CyanAccent)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = formattedHeader,
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFE2E8F0),
-                            fontSize = 10.5.sp,
-                            letterSpacing = 0.4.sp
+                            color = Color.White.copy(alpha = 0.92f),
+                            fontSize = 9.5.sp,
+                            letterSpacing = 0.3.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -793,26 +808,29 @@ fun MatchCard(
                 IconButton(
                     onClick = onFavoriteToggle,
                     modifier = Modifier
-                        .size(26.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (match.isFavorite) GoldYellow.copy(alpha = 0.18f) else Color(0xFF131D2E))
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(
+                            if (match.isFavorite) GoldYellow.copy(alpha = 0.22f)
+                            else Color.White.copy(alpha = 0.08f)
+                        )
                         .border(
-                            1.dp,
-                            if (match.isFavorite) GoldYellow.copy(alpha = 0.6f) else Color(0xFF23324D),
-                            RoundedCornerShape(8.dp)
+                            0.8.dp,
+                            if (match.isFavorite) GoldYellow.copy(alpha = 0.65f) else Color.White.copy(alpha = 0.20f),
+                            RoundedCornerShape(7.dp)
                         )
                         .testTag("fav_toggle_${match.id}")
                 ) {
                     Icon(
                         imageVector = if (match.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
                         contentDescription = if (match.isFavorite) "Remove from Favourites" else "Add to Favourites",
-                        tint = if (match.isFavorite) GoldYellow else TextSecondary,
-                        modifier = Modifier.size(14.dp)
+                        tint = if (match.isFavorite) GoldYellow else Color.White.copy(alpha = 0.75f),
+                        modifier = Modifier.size(12.5.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             // 2. Compact Arena Row: Team 1 | Center VS/LIVE | Team 2
             Row(
@@ -822,7 +840,7 @@ fun MatchCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Team 1 Column (Shield + Name Underneath)
+                // Team 1 Column (Compact Shield + Name)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
@@ -834,13 +852,13 @@ fun MatchCard(
                         teamName = match.team1Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = team1Display,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 12.5.sp
+                            fontSize = 11.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -848,10 +866,10 @@ fun MatchCard(
                     )
                 }
 
-                // Center Stadium Hub
+                // Center Frosted Glass Hub
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(horizontal = 6.dp)
                 ) {
                     when (match.status) {
                         MatchStatus.LIVE -> {
@@ -859,13 +877,13 @@ fun MatchCard(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
-                                    .background(LiveRed.copy(alpha = 0.20f))
-                                    .border(1.dp, LiveRed, RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 9.dp, vertical = 2.dp)
+                                    .background(LiveRed.copy(alpha = 0.22f))
+                                    .border(0.9.dp, LiveRed, RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 8.dp, vertical = 1.5.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(5.dp)
                                         .clip(CircleShape)
                                         .background(LiveRed)
                                 )
@@ -875,18 +893,18 @@ fun MatchCard(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White,
-                                        fontSize = 9.5.sp,
-                                        letterSpacing = 0.6.sp
+                                        fontSize = 8.5.sp,
+                                        letterSpacing = 0.5.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = liveTimerFormatted,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = CyanAccent,
-                                    fontSize = 11.5.sp
+                                    fontSize = 10.5.sp
                                 )
                             )
                         }
@@ -894,26 +912,26 @@ fun MatchCard(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
-                                    .background(GoldYellow.copy(alpha = 0.14f))
-                                    .border(1.dp, GoldYellow.copy(alpha = 0.55f), RoundedCornerShape(99.dp))
-                                    .padding(horizontal = 9.dp, vertical = 2.dp)
+                                    .background(Color.White.copy(alpha = 0.10f))
+                                    .border(0.8.dp, GoldYellow.copy(alpha = 0.60f), RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 8.dp, vertical = 1.5.dp)
                             ) {
                                 Text(
                                     text = "VS",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = GoldYellow,
-                                        fontSize = 10.5.sp
+                                        fontSize = 9.5.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = upcomingTimeText,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = CyanAccent,
-                                    fontSize = 11.sp
+                                    fontSize = 10.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -921,8 +939,8 @@ fun MatchCard(
                                 text = upcomingDateText,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 9.5.sp
+                                    color = Color.White.copy(alpha = 0.70f),
+                                    fontSize = 8.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -931,24 +949,25 @@ fun MatchCard(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
-                                    .background(Color(0xFF1E293B))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .background(Color.White.copy(alpha = 0.10f))
+                                    .border(0.8.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 7.dp, vertical = 1.5.dp)
                             ) {
                                 Text(
                                     text = "FINISHED",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF94A3B8),
-                                        fontSize = 9.sp
+                                        color = Color.White.copy(alpha = 0.75f),
+                                        fontSize = 8.5.sp
                                     )
                                 )
                             }
-                            Spacer(modifier = Modifier.height(3.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = upcomingDateText,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextMuted,
-                                    fontSize = 9.5.sp
+                                    color = Color.White.copy(alpha = 0.55f),
+                                    fontSize = 8.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -959,7 +978,7 @@ fun MatchCard(
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = GoldYellow,
-                                    fontSize = 13.sp
+                                    fontSize = 11.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
@@ -967,7 +986,7 @@ fun MatchCard(
                     }
                 }
 
-                // Team 2 Column (Shield + Name Underneath)
+                // Team 2 Column (Compact Shield + Name)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
@@ -979,13 +998,13 @@ fun MatchCard(
                         teamName = match.team2Name,
                         isNationalTeam = match.isNationalTeam
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = team2Display,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 12.5.sp
+                            fontSize = 11.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -994,16 +1013,16 @@ fun MatchCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // 3. Compact Bottom Action Dock
+            // 3. Compact Frosted Glass Bottom Action Strip
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF080C14))
-                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(9.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1012,15 +1031,15 @@ fun MatchCard(
                         imageVector = if (isLive) Icons.Default.Sensors else Icons.Default.Schedule,
                         contentDescription = null,
                         tint = if (isLive) LiveRed else SkyBlue,
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(11.5.dp)
                     )
-                    Spacer(modifier = Modifier.width(5.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isLive) "Live Broadcast Active" else bottomStatusText,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isLive) Color(0xFFE2E8F0) else TextSecondary,
-                            fontSize = 11.sp
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = 10.sp
                         )
                     )
                 }
@@ -1035,28 +1054,33 @@ fun MatchCard(
                             } else {
                                 Brush.horizontalGradient(
                                     colors = listOf(
-                                        CyanAccent.copy(alpha = 0.18f),
-                                        SkyBlue.copy(alpha = 0.18f)
+                                        Color.White.copy(alpha = 0.14f),
+                                        Color.White.copy(alpha = 0.08f)
                                     )
                                 )
                             }
                         )
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                        .border(
+                            width = 0.8.dp,
+                            color = if (isLive) Color.Transparent else Color.White.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(99.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = if (isLive) Color(0xFF070A10) else CyanAccent,
-                        modifier = Modifier.size(12.dp)
+                        tint = if (isLive) Color.Black else CyanAccent,
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = if (isLive) "WATCH LIVE" else "SERVERS",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = if (isLive) Color(0xFF070A10) else CyanAccent,
-                            fontSize = 9.5.sp,
-                            letterSpacing = 0.4.sp
+                            color = if (isLive) Color.Black else CyanAccent,
+                            fontSize = 8.5.sp,
+                            letterSpacing = 0.3.sp
                         )
                     )
                 }
@@ -1107,10 +1131,10 @@ fun TeamFlagBadge(
     if (isMotoGp && resolved.flagUrl.isBlank()) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(Color(0xFF141F33))
-                .border(1.1.dp, CyanAccent.copy(alpha = 0.45f), RoundedCornerShape(13.dp)),
+                .size(34.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(Color.White.copy(alpha = 0.10f))
+                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(11.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -1118,7 +1142,7 @@ fun TeamFlagBadge(
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
                     color = CyanAccent,
-                    fontSize = 11.5.sp,
+                    fontSize = 10.sp,
                     letterSpacing = (-0.5).sp
                 )
             )
@@ -1152,32 +1176,38 @@ fun TeamFlagBadge(
 
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(13.dp))
+                .size(34.dp)
+                .clip(RoundedCornerShape(11.dp))
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(Color(0xFF1E2F4D), Color(0xFF0E1624))
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.16f),
+                            Color.White.copy(alpha = 0.05f)
+                        )
                     )
                 )
                 .border(
-                    width = 1.1.dp,
+                    width = 1.dp,
                     brush = Brush.linearGradient(
-                        colors = listOf(CyanAccent.copy(alpha = 0.50f), SkyBlue.copy(alpha = 0.25f))
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.38f),
+                            Color.White.copy(alpha = 0.14f)
+                        )
                     ),
-                    shape = RoundedCornerShape(13.dp)
+                    shape = RoundedCornerShape(11.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             if (!hasRemoteUrl) {
                 if (effectiveIsNational && resolved.emoji.isNotBlank() && resolved.emoji != "🏳️") {
-                    Text(text = resolved.emoji, fontSize = 19.sp)
+                    Text(text = resolved.emoji, fontSize = 16.sp)
                 } else {
                     Text(
                         text = resolved.code.take(3).uppercase(),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = CyanAccent,
-                            fontSize = 10.5.sp
+                            fontSize = 9.5.sp
                         )
                     )
                 }
@@ -1197,8 +1227,8 @@ fun TeamFlagBadge(
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(if (effectiveIsNational) 0.dp else 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .padding(if (effectiveIsNational) 0.dp else 3.5.dp)
+                        .clip(RoundedCornerShape(10.dp))
                 )
             }
         }
@@ -1338,27 +1368,33 @@ fun MultipleStreamsModalDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF0A0F1A),
-        scrimColor = Color.Black.copy(alpha = 0.72f),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = Color(0xEB070A12),
+        scrimColor = Color.Black.copy(alpha = 0.78f),
+        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
         dragHandle = {
             Box(
                 modifier = Modifier
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .width(48.dp)
-                    .height(5.dp)
+                    .padding(top = 10.dp, bottom = 4.dp)
+                    .width(44.dp)
+                    .height(4.dp)
                     .clip(RoundedCornerShape(99.dp))
-                    .background(
-                        Brush.horizontalGradient(colors = listOf(CyanAccent, SkyBlue))
-                    )
+                    .background(Color.White.copy(alpha = 0.35f))
             )
         }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.10f),
+                            Color.White.copy(alpha = 0.03f)
+                        )
+                    )
+                )
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -1372,23 +1408,17 @@ fun MultipleStreamsModalDialog(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                when {
-                                    isUpcomingMatch -> GoldYellow.copy(alpha = 0.14f)
-                                    isFinishedMatch -> SkyBlue.copy(alpha = 0.14f)
-                                    else -> CyanAccent.copy(alpha = 0.14f)
-                                }
-                            )
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(Color.White.copy(alpha = 0.10f))
                             .border(
-                                1.2.dp,
+                                1.dp,
                                 when {
                                     isUpcomingMatch -> GoldYellow.copy(alpha = 0.65f)
                                     isFinishedMatch -> SkyBlue.copy(alpha = 0.65f)
-                                    else -> CyanAccent.copy(alpha = 0.65f)
+                                    else -> Color.White.copy(alpha = 0.32f)
                                 },
-                                RoundedCornerShape(14.dp)
+                                RoundedCornerShape(13.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1404,7 +1434,7 @@ fun MultipleStreamsModalDialog(
                                 isFinishedMatch -> SkyBlue
                                 else -> CyanAccent
                             },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -1418,8 +1448,8 @@ fun MultipleStreamsModalDialog(
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
-                                fontSize = 17.sp,
-                                letterSpacing = 0.6.sp
+                                fontSize = 15.5.sp,
+                                letterSpacing = 0.5.sp
                             )
                         )
                         Text(
@@ -1427,7 +1457,7 @@ fun MultipleStreamsModalDialog(
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = if (isUpcomingMatch) GoldYellow else CyanAccent,
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.5.sp
+                                fontSize = 11.5.sp
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -1438,38 +1468,39 @@ fun MultipleStreamsModalDialog(
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF151F32))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
                 ) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Close",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Team vs Team Header Banner inside Modal when match is present
             if (match != null && (isUpcomingMatch || isFinishedMatch)) {
                 Surface(
-                    color = Color(0xFF111A2B),
-                    shape = RoundedCornerShape(20.dp),
+                    color = Color.White.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
                             1.dp,
-                            if (isUpcomingMatch) GoldYellow.copy(alpha = 0.35f) else NavyBorder,
-                            RoundedCornerShape(20.dp)
+                            if (isUpcomingMatch) GoldYellow.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.22f),
+                            RoundedCornerShape(18.dp)
                         )
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Row(
@@ -1487,13 +1518,13 @@ fun MultipleStreamsModalDialog(
                                     teamName = match.team1Name,
                                     isNationalTeam = match.isNationalTeam
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(5.dp))
                                 Text(
                                     text = match.team1Name,
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
-                                        fontSize = 13.sp
+                                        fontSize = 12.sp
                                     ),
                                     textAlign = TextAlign.Center,
                                     maxLines = 1,
@@ -1510,13 +1541,13 @@ fun MultipleStreamsModalDialog(
                                 } else {
                                     FinishedBadge()
                                 }
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(5.dp))
                                 Text(
                                     text = "VS",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = CyanAccent,
-                                        fontSize = 14.sp
+                                        fontSize = 13.sp
                                     )
                                 )
                             }
@@ -1531,13 +1562,13 @@ fun MultipleStreamsModalDialog(
                                     teamName = match.team2Name,
                                     isNationalTeam = match.isNationalTeam
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(5.dp))
                                 Text(
                                     text = match.team2Name,
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
-                                        fontSize = 13.sp
+                                        fontSize = 12.sp
                                     ),
                                     textAlign = TextAlign.Center,
                                     maxLines = 1,
@@ -1547,14 +1578,14 @@ fun MultipleStreamsModalDialog(
                         }
 
                         if (isUpcomingMatch) {
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(Color(0xFF090E18))
-                                    .border(1.dp, GoldYellow.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
-                                    .padding(vertical = 12.dp, horizontal = 14.dp),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.06f))
+                                    .border(1.dp, GoldYellow.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                    .padding(vertical = 10.dp, horizontal = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1563,94 +1594,93 @@ fun MultipleStreamsModalDialog(
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = TextSecondary,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp,
-                                            letterSpacing = 1.2.sp
+                                            fontSize = 9.5.sp,
+                                            letterSpacing = 1.1.sp
                                         )
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Text(
                                         text = countdownText,
                                         style = MaterialTheme.typography.headlineSmall.copy(
                                             color = GoldYellow,
                                             fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 22.sp,
+                                            fontSize = 20.sp,
                                             letterSpacing = 1.sp
                                         )
                                     )
                                     if (match.matchTime.isNotBlank()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Spacer(modifier = Modifier.height(3.dp))
                                         Text(
                                             text = "Kickoff: ${match.matchTime} (BD Time)",
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 color = CyanAccent,
                                                 fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.5.sp
+                                                fontSize = 11.sp
                                             )
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "এই ম্যাচটি এখনো শুরু হয়নি। খেলা শুরুর ১৫-৩০ মিনিট আগে লাইভ স্ট্রিম সার্ভার অটোমেটিক চালু হবে।",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 12.sp
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 11.5.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
 
                             if (onToggleFavorite != null) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                                 OutlinedButton(
                                     onClick = onToggleFavorite,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(12.dp),
+                                        .height(40.dp),
+                                    shape = RoundedCornerShape(11.dp),
                                     border = ButtonDefaults.outlinedButtonBorder.copy(
                                         brush = androidx.compose.ui.graphics.SolidColor(
                                             if (match.isFavorite) GoldYellow else CyanAccent
                                         )
                                     ),
                                     colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = if (match.isFavorite) GoldYellow.copy(alpha = 0.16f) else CyanAccent.copy(alpha = 0.12f)
+                                        containerColor = if (match.isFavorite) GoldYellow.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.08f)
                                     )
                                 ) {
                                     Icon(
                                         Icons.Default.Star,
                                         contentDescription = null,
                                         tint = if (match.isFavorite) GoldYellow else CyanAccent,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = if (match.isFavorite) "Saved in Favourites ⭐" else "Add to Favourites / Remind Me",
                                         color = if (match.isFavorite) GoldYellow else CyanAccent,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
+                                        fontSize = 12.sp
                                     )
                                 }
                             }
                         } else if (isFinishedMatch) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = "এই ম্যাচটি সমাপ্ত হয়েছে। লাইভ স্ট্রিমিং বন্ধ রয়েছে।",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 12.5.sp
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 12.sp
                                 ),
                                 textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
             if (isFinishedMatch) {
-                // For Finished matches: prioritize Official Highlights button instead of dead live links
                 if (matchedHighlightItem != null && onWatchHighlightItem != null) {
                     Button(
                         onClick = {
@@ -1659,9 +1689,9 @@ fun MultipleStreamsModalDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
+                            .height(46.dp)
                             .testTag("watch_matched_highlight_button"),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoldYellow,
                             contentColor = Color.Black
@@ -1670,14 +1700,14 @@ fun MultipleStreamsModalDialog(
                         Icon(
                             Icons.Default.PlayCircle,
                             contentDescription = "Watch Highlight",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Watch Match Highlights (FHD)",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         )
                     }
@@ -1689,9 +1719,9 @@ fun MultipleStreamsModalDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp)
+                            .height(46.dp)
                             .testTag("watch_highlight_button"),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(13.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoldYellow,
                             contentColor = Color.Black
@@ -1700,27 +1730,26 @@ fun MultipleStreamsModalDialog(
                         Icon(
                             Icons.Default.PlayCircle,
                             contentDescription = "Watch Highlight",
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Watch Official Highlight",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
                         )
                     }
                 }
             } else if (isUpcomingMatch) {
-                // For Upcoming matches: if the server has already uploaded early pre-match links, show them below the countdown
                 if (enabledStreams.isNotEmpty()) {
                     Text(
                         text = "PRE-MATCH SERVERS AVAILABLE",
                         style = MaterialTheme.typography.labelSmall.copy(
                             color = CyanAccent,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             letterSpacing = 1.sp
                         ),
                         modifier = Modifier
@@ -1732,7 +1761,7 @@ fun MultipleStreamsModalDialog(
                             .fillMaxWidth()
                             .heightIn(max = 220.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         enabledStreams.forEach { stream ->
                             val isSelected = currentSelectedStream?.id == stream.id
@@ -1748,53 +1777,60 @@ fun MultipleStreamsModalDialog(
                     }
                 }
             } else {
-                // LIVE Match / Channel / Highlight Stream Picker
                 if (isLoadingStreams && enabledStreams.isEmpty()) {
                     Surface(
-                        color = Color(0xFF121B2B),
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        color = Color.White.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
                     ) {
                         Row(
-                            modifier = Modifier.padding(20.dp),
+                            modifier = Modifier.padding(18.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(18.dp),
                                 color = CyanAccent,
-                                strokeWidth = 2.2.dp
+                                strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Decrypting live FHD servers...",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = Color.White,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp
                                 )
                             )
                         }
                     }
                 } else if (enabledStreams.isEmpty()) {
                     Surface(
-                        color = Color(0xFF121B2B),
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        color = Color.White.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
                     ) {
                         Text(
                             text = "No active stream servers are currently online for this event.",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF94A3B8)),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 12.5.sp
+                            ),
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(20.dp)
+                            modifier = Modifier.padding(18.dp)
                         )
                     }
                 } else {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 340.dp)
+                            .heightIn(max = 320.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         enabledStreams.forEach { stream ->
                             val isSelected = currentSelectedStream?.id == stream.id
@@ -1811,7 +1847,7 @@ fun MultipleStreamsModalDialog(
                 }
 
                 if (!approvedHighlightUrl.isNullOrBlank() && onWatchHighlight != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         onClick = {
                             onWatchHighlight(approvedHighlightUrl)
@@ -1819,9 +1855,9 @@ fun MultipleStreamsModalDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(46.dp)
+                            .height(42.dp)
                             .testTag("watch_highlight_button"),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = GoldYellow.copy(alpha = 0.2f),
                             contentColor = GoldYellow
@@ -1830,9 +1866,9 @@ fun MultipleStreamsModalDialog(
                         Icon(
                             Icons.Default.PlayCircle,
                             contentDescription = "Watch Highlight",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Watch Official Highlight",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
@@ -1841,7 +1877,7 @@ fun MultipleStreamsModalDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -1855,21 +1891,29 @@ fun StreamItemButton(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .border(
-                width = if (isSelected) 1.5.dp else 1.dp,
-                color = if (isSelected) CyanAccent else Color(0xFF24344E),
-                shape = RoundedCornerShape(16.dp)
+                width = if (isSelected) 1.3.dp else 1.dp,
+                color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.22f),
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
             .testTag("stream_option_${stream.name.lowercase().replace(" ", "_")}"),
-        color = Color(0xFF141F33),
-        shape = RoundedCornerShape(16.dp)
+        color = Color.White.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.03f)
+                        )
+                    )
+                )
+                .padding(horizontal = 13.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -1879,26 +1923,27 @@ fun StreamItemButton(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CyanAccent.copy(alpha = 0.16f)),
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(9.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
                         contentDescription = null,
                         tint = CyanAccent,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         text = stream.name,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White,
-                            fontSize = 15.sp
+                            fontSize = 13.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1906,8 +1951,8 @@ fun StreamItemButton(
                     Text(
                         text = "Instant Direct Server • Low Latency",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = TextSecondary,
-                            fontSize = 10.5.sp
+                            color = Color.White.copy(alpha = 0.65f),
+                            fontSize = 9.5.sp
                         )
                     )
                 }

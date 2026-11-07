@@ -7,10 +7,11 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
     :root {
-      --bg: #070a10;
-      --surface: #0f1623;
-      --surface-alt: #172235;
-      --border: #23324d;
+      --bg: #000000;
+      --surface: rgba(255, 255, 255, 0.08);
+      --surface-alt: rgba(255, 255, 255, 0.13);
+      --border: rgba(255, 255, 255, 0.22);
+      --neon: #00f59b;
       --blue: #00f59b;
       --blue-glow: #00c97e;
       --cyan: #00e5ff;
@@ -18,14 +19,19 @@
       --gold: #ffb800;
       --green: #00f59b;
       --text: #f8fafc;
-      --muted: #94a3b8;
+      --muted: #b0bec5;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body {
-      background: var(--bg);
+      background-color: #000000;
+      background-image:
+        radial-gradient(circle at 15% 12%, rgba(0, 245, 155, 0.14), transparent 45%),
+        radial-gradient(circle at 88% 45%, rgba(0, 229, 255, 0.11), transparent 45%),
+        radial-gradient(circle at 45% 82%, rgba(255, 255, 255, 0.06), transparent 50%);
+      background-attachment: fixed;
       color: var(--text);
       min-height: 100vh;
-      padding-bottom: 110px;
+      padding-bottom: 100px;
     }
     .app-shell {
       max-width: 960px;
@@ -33,53 +39,56 @@
       padding: 0 12px;
     }
 
-    /* Top App Bar — Obsidian Carbon & Electric Emerald Neon */
+    /* Top App Bar — Black Glassmorphism & Frosted White Overlay */
     .top-bar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(7, 10, 16, 0.96);
-      backdrop-filter: blur(14px);
-      padding: 14px 6px 11px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      padding: 10px 8px 9px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      border-bottom: 1px solid rgba(0, 245, 155, 0.28);
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.22);
     }
     .top-title-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
     }
     .top-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 800;
       letter-spacing: 0.5px;
       color: #fff;
     }
     .admin-pill {
-      background: rgba(0, 245, 155, 0.14);
-      border: 1px solid rgba(0, 245, 155, 0.5);
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.28);
       color: var(--blue);
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
-      padding: 3px 9px;
-      border-radius: 8px;
+      padding: 2px 8px;
+      border-radius: 7px;
       letter-spacing: 0.7px;
     }
     .top-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .icon-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.09);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       color: #fff;
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -88,12 +97,13 @@
     }
     .icon-btn:hover { border-color: var(--blue); color: var(--blue); }
     .auth-btn {
-      background: #121c2e;
+      background: rgba(255, 255, 255, 0.09);
+      backdrop-filter: blur(16px);
       color: var(--blue);
-      border: 1px solid var(--blue);
-      padding: 8px 14px;
-      border-radius: 12px;
-      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      padding: 6px 12px;
+      border-radius: 11px;
+      font-size: 11.5px;
       font-weight: 800;
       cursor: pointer;
     }
@@ -105,127 +115,134 @@
     /* Search Drawer */
     .search-bar-wrap {
       display: none;
-      padding: 8px 4px;
+      padding: 6px 4px;
     }
     .search-bar-wrap.open { display: block; }
     .search-input {
       width: 100%;
-      background: var(--surface);
-      border: 1.5px solid var(--blue);
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.26);
       color: #fff;
-      padding: 11px 16px;
-      border-radius: 14px;
-      font-size: 14px;
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 13px;
       outline: none;
     }
 
     /* Cloud & Server Status Strip */
     .status-strip {
-      margin: 8px 4px 4px;
-      padding: 8px 14px;
-      background: #111a29;
-      border: 1px solid #1f2e46;
-      border-radius: 12px;
+      margin: 6px 4px 4px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 11px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--muted);
     }
     .status-dot {
       display: inline-block;
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--green);
       margin-right: 6px;
       box-shadow: 0 0 8px var(--green);
     }
 
-    /* Neon Capsule Sport Filter Dock (First Idea UI) */
+    /* Frosted Glass Capsule Sport Filter Dock */
     .sport-circles-row {
       display: flex;
-      gap: 10px;
+      gap: 7px;
       overflow-x: auto;
-      padding: 12px 4px 10px;
+      padding: 8px 4px 7px;
       scrollbar-width: none;
     }
     .sport-circles-row::-webkit-scrollbar { display: none; }
     .sport-capsule-item {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 9px 15px;
-      border-radius: 16px;
-      background: #0F1623;
-      border: 1.3px solid #1E2C42;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 99px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
       transition: all 0.18s ease;
     }
     .sport-capsule-item:hover {
-      border-color: rgba(0, 245, 155, 0.5);
+      border-color: rgba(255, 255, 255, 0.45);
       transform: translateY(-1px);
     }
     .sport-capsule-item.active {
-      background: linear-gradient(90deg, rgba(0, 245, 155, 0.2), rgba(0, 229, 255, 0.12));
-      border: 1.6px solid var(--neon);
-      box-shadow: 0 0 16px rgba(0, 245, 155, 0.22);
+      background: linear-gradient(90deg, #00F59B, #00E5FF);
+      border: 1px solid #00F59B;
+      box-shadow: 0 0 14px rgba(0, 245, 155, 0.25);
     }
     .sport-capsule-emoji {
-      font-size: 16px;
+      font-size: 13px;
     }
     .sport-capsule-label {
-      font-size: 13.5px;
-      color: #8E9BAE;
-      font-weight: 600;
+      font-size: 11.5px;
+      color: #F8FAFC;
+      font-weight: 700;
     }
     .sport-capsule-item.active .sport-capsule-label {
       font-weight: 800;
-      color: #F4F8FF;
+      color: #000000;
     }
     .sport-badge {
-      background: #172234;
-      color: var(--cyan);
-      font-size: 11px;
+      background: var(--red);
+      color: #ffffff;
+      font-size: 9.5px;
       font-weight: 800;
-      padding: 2px 8px;
+      padding: 1px 6px;
       border-radius: 99px;
     }
     .sport-capsule-item.active .sport-badge {
-      background: var(--neon);
-      color: #04120B;
+      background: rgba(0, 0, 0, 0.22);
+      color: #000000;
     }
 
     /* Status Filter Pills Row (All, Live, Upcoming, Finished) */
     .status-pills-row {
       display: flex;
-      gap: 10px;
+      gap: 7px;
       overflow-x: auto;
-      padding: 4px 4px 14px;
+      padding: 2px 4px 10px;
       scrollbar-width: none;
     }
     .status-pill {
-      background: #0F1623;
-      color: #8E9BAE;
-      border: 1.2px solid #1E2C42;
-      padding: 8px 18px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: rgba(255, 255, 255, 0.90);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 6px 14px;
       border-radius: 99px;
-      font-size: 13px;
+      font-size: 11.5px;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       transition: all 0.16s;
     }
     .status-pill.active {
       border-color: var(--neon);
-      background: rgba(0, 245, 155, 0.15);
+      background: rgba(255, 255, 255, 0.16);
       color: var(--neon);
       font-weight: 800;
     }
@@ -236,30 +253,31 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
-      margin: 4px 4px 14px;
+      gap: 8px;
+      margin: 2px 4px 10px;
     }
     .btn-add {
       background: linear-gradient(135deg, #00F59B, #00E5FF);
       color: #04120B;
       border: none;
-      padding: 10px 18px;
-      border-radius: 12px;
-      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 800;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 16px rgba(0, 245, 155, 0.3);
+      gap: 5px;
+      box-shadow: 0 4px 14px rgba(0, 245, 155, 0.25);
     }
     .btn-secondary {
-      background: #141E30;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
       color: #fff;
       border: 1px solid var(--border);
-      padding: 9px 14px;
-      border-radius: 10px;
-      font-size: 12px;
+      padding: 7px 12px;
+      border-radius: 9px;
+      font-size: 11.5px;
       font-weight: 600;
       cursor: pointer;
     }
@@ -267,9 +285,9 @@
       background: rgba(255, 46, 84, 0.16);
       color: #ff6b81;
       border: 1px solid rgba(255, 46, 84, 0.45);
-      padding: 6px 11px;
-      border-radius: 9px;
-      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 10.5px;
       font-weight: 800;
       cursor: pointer;
     }
@@ -277,64 +295,67 @@
       background: rgba(0, 229, 255, 0.14);
       color: var(--cyan);
       border: 1px solid rgba(0, 229, 255, 0.45);
-      padding: 6px 11px;
-      border-radius: 9px;
-      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      font-size: 10.5px;
       font-weight: 800;
       cursor: pointer;
     }
 
-    /* 3D Stadium Vertical Shield Cards (First Idea UI) */
+    /* Compact Frosted White Glass Match Cards (Backdrop Blur) */
     .cards-list {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 9px;
       padding: 0 2px;
     }
     .match-card {
-      background: linear-gradient(180deg, #131D2E 0%, #0C121D 100%);
-      border: 1.3px solid #1E2C42;
-      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-top: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 15px;
       overflow: hidden;
       cursor: pointer;
       transition: transform 0.15s, border-color 0.18s, box-shadow 0.18s;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
     }
     .match-card.live-glow {
-      border-color: rgba(0, 245, 155, 0.55);
+      border-color: rgba(255, 255, 255, 0.36);
     }
     .match-card:hover {
-      border-color: var(--neon);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 28px rgba(0, 245, 155, 0.14);
+      border-color: rgba(255, 255, 255, 0.52);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(0, 245, 155, 0.14);
     }
     .card-top-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      padding: 11px 16px;
-      background: #141E30;
-      border-bottom: 1px solid rgba(30, 44, 66, 0.7);
+      gap: 6px;
+      padding: 7px 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
     .card-league-wrap {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
       flex: 1;
     }
     .card-league-logo {
-      width: 22px;
-      height: 22px;
+      width: 16px;
+      height: 16px;
       object-fit: contain;
       flex-shrink: 0;
     }
     .card-league-title {
-      font-size: 12.5px;
+      font-size: 10.5px;
       font-weight: 800;
-      letter-spacing: 0.4px;
-      color: var(--cyan);
+      letter-spacing: 0.3px;
+      color: rgba(255, 255, 255, 0.92);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -342,155 +363,156 @@
     .card-datetime {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       flex-shrink: 0;
-      font-size: 11.5px;
-      background: #0B101A;
-      border: 1px solid #1E2C42;
-      padding: 4px 10px;
-      border-radius: 8px;
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 2px 8px;
+      border-radius: 7px;
     }
     .card-time-blue {
       color: var(--gold);
       font-weight: 800;
     }
     .card-date-white {
-      color: #8E9BAE;
+      color: rgba(255, 255, 255, 0.78);
       font-weight: 600;
     }
     .card-teams-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 18px 16px 14px;
+      gap: 8px;
+      padding: 9px 12px 8px;
     }
     .team-side {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      gap: 9px;
+      gap: 5px;
       flex: 1;
       min-width: 0;
     }
     .team-shield-box {
-      width: 62px;
-      height: 62px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #1B2940 0%, #0F1726 100%);
-      border: 1.5px solid #263854;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.05) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.32);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 6px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      padding: 4px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.38);
     }
     .team-logo {
-      width: 46px;
-      height: 46px;
+      width: 28px;
+      height: 28px;
       object-fit: contain;
-      border-radius: 50%;
+      border-radius: 8px;
     }
     .team-name {
-      font-size: 14px;
+      font-size: 11.5px;
       font-weight: 800;
-      color: #F4F8FF;
+      color: #FFFFFF;
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      line-height: 1.25;
+      line-height: 1.2;
     }
     .center-status {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-width: 86px;
-      gap: 5px;
+      min-width: 72px;
+      gap: 3px;
     }
     .vs-pill-gold {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #172234;
-      border: 1.4px solid rgba(255, 184, 0, 0.55);
+      padding: 2px 9px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 184, 0, 0.55);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: 10px;
       font-weight: 900;
       color: var(--gold);
     }
     .live-badge-center {
-      background: rgba(255, 46, 84, 0.18);
-      border: 1.2px solid var(--red);
-      color: var(--red);
-      font-size: 11px;
+      background: rgba(255, 46, 84, 0.22);
+      border: 1px solid var(--red);
+      color: #fff;
+      font-size: 9px;
       font-weight: 900;
-      letter-spacing: 0.7px;
-      padding: 5px 12px;
+      letter-spacing: 0.5px;
+      padding: 2px 9px;
       border-radius: 99px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
     .live-dot {
-      width: 7px;
-      height: 7px;
+      width: 5px;
+      height: 5px;
       background: var(--red);
       border-radius: 50%;
       display: inline-block;
-      box-shadow: 0 0 8px var(--red);
+      box-shadow: 0 0 6px var(--red);
     }
     .card-action-bar {
-      padding: 10px 16px;
-      background: #0A0F18;
-      border-top: 1px solid #1E2C42;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
     }
     .watch-pill-btn {
-      background: var(--neon);
-      color: #04120B;
-      font-size: 11px;
+      background: linear-gradient(90deg, var(--neon), var(--cyan));
+      color: #000000;
+      font-size: 9.5px;
       font-weight: 900;
-      letter-spacing: 0.5px;
-      padding: 6px 14px;
+      letter-spacing: 0.3px;
+      padding: 4px 10px;
       border-radius: 99px;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
     }
     .watch-pill-btn.gold {
-      background: rgba(255, 184, 0, 0.16);
-      border: 1px solid rgba(255, 184, 0, 0.6);
-      color: var(--gold);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      color: var(--neon);
     }
 
     /* Categories & Channels Grid */
     .grid-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 9px;
     }
     .channel-card {
-      background: var(--surface);
-      border: 1.2px solid var(--border);
-      border-radius: 18px;
-      padding: 15px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 14px;
+      padding: 11px 13px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       cursor: pointer;
       transition: border-color 0.15s;
     }
-    .channel-card:hover { border-color: var(--neon); }
+    .channel-card:hover { border-color: rgba(255, 255, 255, 0.5); }
 
     /* Editor Card / Form */
     .editor-panel {
@@ -540,14 +562,16 @@
     .streams-modal {
       width: 100%;
       max-width: 540px;
-      background: #0D131F;
-      border-top: 2px solid var(--neon);
-      border-left: 1px solid #1E2C42;
-      border-right: 1px solid #1E2C42;
-      border-radius: 28px 28px 0 0;
-      padding: 18px 20px 26px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(12, 16, 24, 0.88));
+      backdrop-filter: blur(26px);
+      -webkit-backdrop-filter: blur(26px);
+      border-top: 1.5px solid rgba(255, 255, 255, 0.42);
+      border-left: 1px solid rgba(255, 255, 255, 0.22);
+      border-right: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 26px 26px 0 0;
+      padding: 16px 18px 24px;
       text-align: center;
-      box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.85);
+      box-shadow: 0 -16px 50px rgba(0, 0, 0, 0.90);
       max-height: 88vh;
       overflow-y: auto;
       animation: slideUpSheet 0.22s ease-out;
@@ -560,41 +584,43 @@
       width: 48px;
       height: 5px;
       border-radius: 99px;
-      background: #2B3B54;
+      background: rgba(255, 255, 255, 0.28);
       margin: 0 auto 14px;
     }
     .modal-signal-circle {
-      width: 54px;
-      height: 54px;
-      border-radius: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
       background: rgba(0, 245, 155, 0.14);
-      border: 1.5px solid var(--neon);
-      margin: 0 auto 12px;
+      border: 1.2px solid var(--neon);
+      margin: 0 auto 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--neon);
-      font-size: 24px;
+      font-size: 22px;
     }
     .modal-heading {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 900;
       letter-spacing: 0.6px;
       color: #F4F8FF;
       margin-bottom: 4px;
     }
     .modal-sub {
-      font-size: 13px;
+      font-size: 12px;
       color: #8E9BAE;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .stream-row-btn {
       width: 100%;
-      background: #141E30;
-      border: 1.2px solid rgba(0, 245, 155, 0.35);
-      border-radius: 16px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -604,33 +630,33 @@
     }
     .stream-row-btn:hover {
       border-color: var(--neon);
-      background: #18253B;
+      background: rgba(255, 255, 255, 0.18);
     }
     .stream-row-left {
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 800;
     }
     .fhd-badge {
       background: rgba(0, 245, 155, 0.16);
       border: 1px solid var(--neon);
       color: var(--neon);
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 900;
-      padding: 4px 11px;
+      padding: 3px 10px;
       border-radius: 99px;
     }
     .cancel-modal-btn {
       width: 100%;
-      background: #162032;
-      border: 1px solid #26364F;
-      border-radius: 15px;
-      padding: 13px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      border-radius: 14px;
+      padding: 11px;
       margin-top: 6px;
-      color: #8E9BAE;
-      font-size: 14px;
+      color: #B4C0D3;
+      font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.6px;
       cursor: pointer;
@@ -650,7 +676,7 @@
       background: #000;
     }
 
-    /* Floating Obsidian Neon Pill Navigation Bar */
+    /* Floating Frosted Glass Pill Navigation Bar */
     .bottom-nav-wrap {
       position: fixed;
       bottom: 10px;
@@ -665,21 +691,23 @@
     .bottom-nav {
       pointer-events: auto;
       width: 100%;
-      max-width: 620px;
-      height: 70px;
-      background: #0D131F;
-      border: 1.3px solid #1E2C42;
-      border-radius: 26px;
-      padding: 5px 8px;
+      max-width: 600px;
+      height: 62px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 22px;
+      padding: 4px 6px;
       display: flex;
       align-items: center;
       justify-content: space-evenly;
-      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.78);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.22);
     }
     .nav-tab {
       flex: 1;
-      height: 58px;
-      border-radius: 20px;
+      height: 52px;
+      border-radius: 17px;
       border: 1px solid transparent;
       background: transparent;
       color: #8E9BAE;

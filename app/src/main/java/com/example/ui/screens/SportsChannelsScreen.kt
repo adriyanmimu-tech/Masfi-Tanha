@@ -62,16 +62,16 @@ fun SportsChannelsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
-            .padding(horizontal = 12.dp)
+            .background(Color.Transparent)
+            .padding(horizontal = 10.dp)
     ) {
         if (distinctCategories.size > 1) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 distinctCategories.forEach { cat ->
                     val isSelected = selectedCategory.equals(cat, ignoreCase = true)
@@ -83,20 +83,20 @@ fun SportsChannelsScreen(
                                 text = cat,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 11.sp
+                                    fontSize = 10.5.sp
                                 )
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CyanAccent.copy(alpha = 0.2f),
+                            selectedContainerColor = Color.White.copy(alpha = 0.16f),
                             selectedLabelColor = CyanAccent,
-                            containerColor = NavySurface,
-                            labelColor = TextSecondary
+                            containerColor = Color.White.copy(alpha = 0.07f),
+                            labelColor = Color.White.copy(alpha = 0.85f)
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
                             selected = isSelected,
-                            borderColor = if (isSelected) CyanAccent else NavyBorder
+                            borderColor = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.22f)
                         )
                     )
                 }
@@ -115,9 +115,9 @@ fun SportsChannelsScreen(
                         Icons.Default.LiveTv,
                         contentDescription = null,
                         tint = TextTertiary,
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "No channels found in \"$selectedCategory\"",
                         style = MaterialTheme.typography.bodyLarge.copy(
@@ -126,12 +126,12 @@ fun SportsChannelsScreen(
                         ),
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { onCategorySelect("All") },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanAccent)
                     ) {
-                        Text("Show All Channels", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Show All Channels", fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                     }
                 }
             }
@@ -139,9 +139,9 @@ fun SportsChannelsScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 6.dp, bottom = 80.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(filteredChannels, key = { it.id }) { channel ->
                     SportsChannelGridItem(
@@ -164,25 +164,42 @@ fun SportsChannelGridItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(11.dp))
             .clickable(onClick = onClick)
-            .border(1.dp, NavyBorder, RoundedCornerShape(12.dp))
+            .border(
+                width = 1.dp,
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.34f),
+                        Color.White.copy(alpha = 0.12f)
+                    )
+                ),
+                shape = RoundedCornerShape(11.dp)
+            )
             .testTag("channel_item_${channel.name.lowercase().replace(" ", "_")}"),
-        colors = CardDefaults.cardColors(containerColor = NavySurface)
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 10.dp),
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    )
+                )
+                .padding(horizontal = 4.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Circular channel logo badge
+            // Compact Circular channel logo badge
             Box(
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
                     .background(Color.White)
-                    .border(1.5.dp, NavyBorder, CircleShape),
+                    .border(1.2.dp, Color.White.copy(alpha = 0.45f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 val logoUrl = channel.logoUrl.trim()
@@ -193,7 +210,7 @@ fun SportsChannelGridItem(
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(6.dp)
+                            .padding(5.dp)
                             .clip(CircleShape)
                     )
                 } else {
@@ -203,7 +220,7 @@ fun SportsChannelGridItem(
                         style = MaterialTheme.typography.labelMedium.copy(
                             color = Color(0xFF0F172A),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         ),
                         maxLines = 1,
                         textAlign = TextAlign.Center
@@ -211,15 +228,15 @@ fun SportsChannelGridItem(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Channel Name
             Text(
                 text = channel.name,
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = TextPrimary,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.sp
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -231,28 +248,28 @@ fun SportsChannelGridItem(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = 3.dp, vertical = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${channel.streams.size} servers",
+                    text = "${channel.streams.size} srv",
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = CyanAccent,
-                        fontSize = 8.sp,
+                        fontSize = 7.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                 )
 
                 IconButton(
                     onClick = onFavoriteToggle,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 ) {
                     Icon(
                         imageVector = if (channel.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
                         contentDescription = "Favorite",
-                        tint = if (channel.isFavorite) GoldYellow else TextTertiary,
-                        modifier = Modifier.size(14.dp)
+                        tint = if (channel.isFavorite) GoldYellow else TextSecondary,
+                        modifier = Modifier.size(11.dp)
                     )
                 }
             }

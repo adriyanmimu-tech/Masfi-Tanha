@@ -76,15 +76,15 @@ fun HighlightsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
+            .background(Color.Transparent)
     ) {
-        // Modern Neon Capsule Sport Filter Bar for Highlights
+        // Modern Frosted Glass Sport Filter Bar for Highlights
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 10.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             HighlightSportCapsuleItem(
@@ -168,9 +168,9 @@ fun HighlightsScreen(
                         imageVector = Icons.Default.VideoLibrary,
                         contentDescription = null,
                         tint = CyanAccent,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(44.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "Loading Match Highlights...",
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -191,8 +191,8 @@ fun HighlightsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 10.dp),
-                contentPadding = PaddingValues(top = 4.dp, bottom = 92.dp),
-                verticalArrangement = Arrangement.spacedBy(9.dp)
+                contentPadding = PaddingValues(top = 4.dp, bottom = 86.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 items(
                     items = filteredHighlights,
@@ -228,53 +228,58 @@ private fun HighlightSportCapsuleItem(
 
     Box(
         modifier = Modifier
-            .height(36.dp)
+            .height(32.dp)
             .animateContentSize()
             .clip(RoundedCornerShape(99.dp))
             .background(
                 if (isSelected) {
                     Brush.horizontalGradient(colors = listOf(CyanAccent, SkyBlue))
                 } else {
-                    Brush.horizontalGradient(colors = listOf(Color(0xFF111A2B), Color(0xFF111A2B)))
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.11f),
+                            Color.White.copy(alpha = 0.05f)
+                        )
+                    )
                 }
             )
             .border(
                 width = 1.dp,
-                color = if (isSelected) CyanAccent else Color(0xFF22324C),
+                color = if (isSelected) CyanAccent else Color.White.copy(alpha = 0.22f),
                 shape = RoundedCornerShape(99.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 11.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 3.dp)
             .testTag("highlight_sport_${label.lowercase()}"),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = emoji, fontSize = 13.sp)
+            Text(text = emoji, fontSize = 11.5.sp)
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = if (isSelected) Color(0xFF070A10) else Color.White,
+                    color = if (isSelected) Color.Black else Color.White,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 ),
                 maxLines = 1
             )
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(99.dp))
-                    .background(if (isSelected) Color(0xFF070A10).copy(alpha = 0.22f) else LiveRed)
-                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                    .background(if (isSelected) Color.Black.copy(alpha = 0.22f) else LiveRed)
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = badgeCount.toString(),
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (isSelected) Color(0xFF070A10) else Color.White,
+                        color = if (isSelected) Color.Black else Color.White,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 9.5.sp
+                        fontSize = 9.sp
                     )
                 )
             }
@@ -309,22 +314,22 @@ private fun HighlightMatchCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .border(
-                width = 1.1.dp,
+                width = 1.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        GoldYellow.copy(alpha = 0.55f),
-                        CyanAccent.copy(alpha = 0.35f),
-                        Color(0xFF1F2E47)
+                        Color.White.copy(alpha = 0.36f),
+                        GoldYellow.copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.12f)
                     )
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(14.dp)
             )
             .testTag("highlight_card_${item.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C121E))
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.07f))
     ) {
         Column(
             modifier = Modifier
@@ -332,14 +337,14 @@ private fun HighlightMatchCard(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF141F33),
-                            Color(0xFF090E17)
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.04f)
                         )
                     )
                 )
-                .padding(horizontal = 12.dp, vertical = 9.dp)
+                .padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
-            // 1. Top Bar: League Pill on Left + Time/Date Pill on Right
+            // 1. Compact Frosted Top Bar: League Pill on Left + Time/Date Pill on Right
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -349,10 +354,10 @@ private fun HighlightMatchCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF0A0F1A))
-                        .border(1.dp, Color(0xFF233452), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(7.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     if (item.eventLogo.isNotBlank()) {
                         SubcomposeAsyncImage(
@@ -362,13 +367,13 @@ private fun HighlightMatchCard(
                                 .build(),
                             contentDescription = item.tournament,
                             contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(12.dp),
                             error = {
                                 Icon(
                                     imageVector = if (item.sport == SportType.CRICKET) Icons.Default.SportsCricket else Icons.Default.EmojiEvents,
                                     contentDescription = null,
                                     tint = GoldYellow,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                             }
                         )
@@ -377,18 +382,18 @@ private fun HighlightMatchCard(
                             imageVector = if (item.sport == SportType.CRICKET) Icons.Default.SportsCricket else Icons.Default.EmojiEvents,
                             contentDescription = null,
                             tint = GoldYellow,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
 
                     Text(
                         text = headerTitle,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color.White,
+                            color = Color.White.copy(alpha = 0.92f),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 10.5.sp
+                            fontSize = 9.5.sp
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -401,9 +406,9 @@ private fun HighlightMatchCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(99.dp))
-                            .background(Color(0xFF0A0F1A))
-                            .border(1.dp, Color(0xFF1D2C45), RoundedCornerShape(99.dp))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .border(0.8.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(99.dp))
+                            .padding(horizontal = 7.dp, vertical = 1.5.dp)
                     ) {
                         if (item.timeText.isNotBlank()) {
                             Text(
@@ -411,7 +416,7 @@ private fun HighlightMatchCard(
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = CyanAccent,
                                     fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 9.5.sp
+                                    fontSize = 8.5.sp
                                 ),
                                 maxLines = 1
                             )
@@ -423,9 +428,9 @@ private fun HighlightMatchCard(
                             Text(
                                 text = item.dateText,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFFE2E8F0),
+                                    color = Color.White.copy(alpha = 0.85f),
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 9.5.sp
+                                    fontSize = 8.5.sp
                                 ),
                                 maxLines = 1
                             )
@@ -434,7 +439,7 @@ private fun HighlightMatchCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             // 2. Compact Team Shields Row
             Row(
@@ -450,13 +455,13 @@ private fun HighlightMatchCard(
                         logoUrl = item.team1Logo,
                         teamName = team1Display
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = team1Display,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 12.5.sp
+                            fontSize = 11.5.sp
                         ),
                         maxLines = 1,
                         textAlign = TextAlign.Center,
@@ -466,11 +471,11 @@ private fun HighlightMatchCard(
 
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 8.dp)
+                        .padding(horizontal = 6.dp)
                         .clip(RoundedCornerShape(99.dp))
-                        .background(GoldYellow.copy(alpha = 0.14f))
-                        .border(1.dp, GoldYellow.copy(alpha = 0.6f), RoundedCornerShape(99.dp))
-                        .padding(horizontal = 9.dp, vertical = 2.dp),
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(0.8.dp, GoldYellow.copy(alpha = 0.6f), RoundedCornerShape(99.dp))
+                        .padding(horizontal = 8.dp, vertical = 1.5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -478,7 +483,7 @@ private fun HighlightMatchCard(
                         style = MaterialTheme.typography.titleMedium.copy(
                             color = GoldYellow,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         )
                     )
                 }
@@ -491,13 +496,13 @@ private fun HighlightMatchCard(
                         logoUrl = item.team2Logo,
                         teamName = team2Display
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = team2Display,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 12.5.sp
+                            fontSize = 11.5.sp
                         ),
                         maxLines = 1,
                         textAlign = TextAlign.Center,
@@ -506,16 +511,16 @@ private fun HighlightMatchCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // 3. Compact Bottom Action Bar
+            // 3. Compact Frosted Glass Bottom Action Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF080C14))
-                    .border(1.dp, Color(0xFF1B2840), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(9.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -524,7 +529,7 @@ private fun HighlightMatchCard(
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = GoldYellow,
-                        fontSize = 10.5.sp
+                        fontSize = 9.5.sp
                     )
                 )
 
@@ -535,22 +540,22 @@ private fun HighlightMatchCard(
                         .background(
                             Brush.horizontalGradient(colors = listOf(GoldYellow, CyanAccent))
                         )
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = Color(0xFF070A10),
-                        modifier = Modifier.size(12.dp)
+                        tint = Color.Black,
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = "WATCH RECAP",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF070A10),
-                            fontSize = 9.5.sp,
-                            letterSpacing = 0.4.sp
+                            color = Color.Black,
+                            fontSize = 8.5.sp,
+                            letterSpacing = 0.3.sp
                         )
                     )
                 }
@@ -576,19 +581,25 @@ private fun HighlightTeamLogo(
 
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(13.dp))
+            .size(34.dp)
+            .clip(RoundedCornerShape(11.dp))
             .background(
                 Brush.radialGradient(
-                    colors = listOf(Color(0xFF1E2F4D), Color(0xFF0E1624))
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.16f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
                 )
             )
             .border(
-                width = 1.1.dp,
+                width = 1.dp,
                 brush = Brush.linearGradient(
-                    colors = listOf(GoldYellow.copy(alpha = 0.50f), CyanAccent.copy(alpha = 0.30f))
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.38f),
+                        Color.White.copy(alpha = 0.14f)
+                    )
                 ),
-                shape = RoundedCornerShape(13.dp)
+                shape = RoundedCornerShape(11.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -601,7 +612,7 @@ private fun HighlightTeamLogo(
                 contentDescription = teamName,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(28.dp)
                     .padding(2.dp),
                 error = {
                     FallbackCrestBadge(initials = initials)
@@ -617,10 +628,10 @@ private fun HighlightTeamLogo(
 private fun FallbackCrestBadge(initials: String) {
     Box(
         modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF162236))
-            .border(1.dp, CyanAccent, RoundedCornerShape(12.dp)),
+            .size(30.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.10f))
+            .border(1.dp, CyanAccent, RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -628,7 +639,7 @@ private fun FallbackCrestBadge(initials: String) {
             style = MaterialTheme.typography.titleSmall.copy(
                 color = CyanAccent,
                 fontWeight = FontWeight.ExtraBold,
-                fontSize = 10.5.sp
+                fontSize = 9.5.sp
             )
         )
     }

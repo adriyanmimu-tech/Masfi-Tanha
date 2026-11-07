@@ -63,8 +63,8 @@ fun FavouritesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NavyDark)
-            .padding(horizontal = 14.dp)
+            .background(androidx.compose.ui.graphics.Color.Transparent)
+            .padding(horizontal = 10.dp)
     ) {
         if (isEmpty) {
             Box(
@@ -78,15 +78,15 @@ fun FavouritesScreen(
                         Icons.Default.Star,
                         contentDescription = null,
                         tint = TextTertiary,
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(56.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = "No Favourites Found",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
-                            fontSize = 18.sp
+                            fontSize = 17.sp
                         )
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -94,7 +94,7 @@ fun FavouritesScreen(
                         text = "Tap the star icon on any live match or sports channel to pin it here for quick access.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 11.5.sp
                         ),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -103,8 +103,8 @@ fun FavouritesScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 84.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 if (liveFavMatches.isNotEmpty()) {
                     item(key = "fav_live_header") {
